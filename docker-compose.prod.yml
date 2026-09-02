@@ -1,0 +1,31 @@
+services:
+  kaju-app:
+    container_name: kaju-app-prod
+    build: .
+    ports:
+      - "3000:3000"
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    volumes:
+      - ./config.ovpn:/etc/openvpn/config.ovpn:ro
+    environment:
+      - VPN_USERNAME=${VPN_USERNAME}
+      - VPN_PASSWORD=${VPN_PASSWORD}
+    # Auto-restart if the VPN crashes
+    restart: unless-stopped
+    env_file:
+      - ./.env
+    networks:
+      - database
+    healthcheck:
+      test: ["CMD-SHELL", "ip link show tun0 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+
+networks:
+  database:
+    external: true

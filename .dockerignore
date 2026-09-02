@@ -1,0 +1,22 @@
+Dockerfile
+.dockerignore
+node_modules
+npm-debug.log
+README.md
+.next
+.git
+
+# Segredos — nunca devem entrar no contexto de build
+.env
+.env.*
+!.env.example
+config.ovpn
+vpn-auth.txt
+
+# Gerado dentro do builder pelo `prisma generate`
+src/generated
+
+# Ruído de build local / CI
+*.tsbuildinfo
+.gitlab-ci.yml
+docker-compose*.yml

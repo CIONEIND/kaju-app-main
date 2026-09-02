@@ -1,0 +1,163 @@
+# Pipeline do ambiente de DESENVOLVIMENTO.
+#
+# Roda em um GitLab Runner self-hosted (executor `shell`) instalado na própria
+# VPS, então "deploy" é literalmente `docker compose up` na máquina local do
+# runner — não há registry nem SSH no meio.
+#
+# Só dispara na branch `develop`. Produção continua sendo deploy manual com
+# docker-compose.prod.yml e não é tocada por este arquivo.
+#
+# Setup da VPS (runner, /srv/kaju-dev/.env, WireGuard, reverse proxy):
+# ver docs/deploy-dev.md.
+
+stages:
+  # - quality
+  - build
+  - migrate
+  - deploy
+  - verify
+  - rollback
+
+workflow:
+  rules:
+    - if: $CI_COMMIT_BRANCH == "develop"
+
+default:
+  tags:
+    - kaju-vps
+  interruptible: true
+
+variables:
+  GIT_DEPTH: "20"
+  ENV_FILE: /srv/kaju-dev/.env
+  APP_URL: http://127.0.0.1:3001
+  DC: docker compose --env-file /srv/kaju-dev/.env -p kaju-dev -f docker-compose.dev.yml
+
+# ---------------------------------------------------------------------------
+# quality
+# ---------------------------------------------------------------------------
+
+# `allow_failure: true` de propósito: hoje `biome check` acusa 118 erros e 148
+# avisos no código existente, quase todos de formatação. Bloquear o deploy nisso
+# travaria a branch inteira. Rode `npm run format` e limpe o passivo antes de
+# trocar para bloqueante.
+# lint:
+#   stage: quality
+#   allow_failure: true
+#   script:
+#     - $DC build migrate
+#     - docker run --rm kaju-app:builder npm run lint
+
+# ---------------------------------------------------------------------------
+# build
+# ---------------------------------------------------------------------------
+
+build:
+  stage: build
+  script:
+    - |
+      if [ ! -r "$ENV_FILE" ]; then
+        echo "❌ $ENV_FILE não existe ou não é legível pelo usuário gitlab-runner."
+        echo "   Veja docs/deploy-dev.md, seção 'Arquivo de ambiente'."
+        exit 1
+      fi
+    # Constrói `migrate` (estágio builder) e `app` (estágio runner-dev).
+    # As camadas do builder são compartilhadas, então o segundo build é cache.
+    - $DC build
+    # Tag imutável por commit — é o que o job `rollback` consome.
+    - docker tag kaju-app:dev-latest kaju-app:dev-$CI_COMMIT_SHORT_SHA
+
+# ---------------------------------------------------------------------------
+# migrate
+# ---------------------------------------------------------------------------
+
+migrate:
+  stage: migrate
+  resource_group: kaju-dev
+  script:
+    - $DC up -d postgres
+    - $DC run --rm migrate
+    # O seed é idempotente (`upsert` de 27 UFs + 5.570 municípios) e leva ~3s,
+    # então roda junto: garante que os formulários de endereço nunca fiquem
+    # vazios depois de um `down -v` ou de um banco recriado do zero.
+    - $DC run --rm migrate npx prisma db seed
+
+# ---------------------------------------------------------------------------
+# deploy
+# ---------------------------------------------------------------------------
+
+deploy:
+  stage: deploy
+  resource_group: kaju-dev
+  environment:
+    name: development
+    # TODO: trocar pela URL real do subdomínio de dev.
+    url: https://dev.SEU-DOMINIO
+  script:
+    - $DC up -d --no-build app
+
+# ---------------------------------------------------------------------------
+# verify
+# ---------------------------------------------------------------------------
+
+healthcheck:
+  stage: verify
+  script:
+    - |
+      for i in $(seq 1 40); do
+        if curl -fsS "$APP_URL/api/health"; then
+          echo
+          echo "✅ Ambiente de desenvolvimento no ar (commit $CI_COMMIT_SHORT_SHA)."
+          exit 0
+        fi
+        echo "aguardando app subir... ($i/40)"
+        sleep 3
+      done
+      echo "❌ Healthcheck falhou. Últimas linhas do log:"
+      $DC logs --tail=120 app
+      exit 1
+
+# Mantém as 5 imagens mais recentes por commit e limpa camadas órfãs.
+# `docker images` já lista da mais nova para a mais antiga.
+cleanup:
+  stage: verify
+  when: always
+  needs: [healthcheck]
+  script:
+    - |
+      docker images --format '{{.Repository}}:{{.Tag}}' kaju-app \
+        | grep '^kaju-app:dev-' \
+        | grep -v ':dev-latest$' \
+        | tail -n +6 \
+        | xargs -r docker rmi -f || true
+    - docker image prune -f || true
+
+# ---------------------------------------------------------------------------
+# rollback
+# ---------------------------------------------------------------------------
+
+# Job manual. Rode com a variável ROLLBACK_TAG preenchida, ex.: dev-a1b2c3d
+# (as tags disponíveis saem de `docker images kaju-app` na VPS).
+rollback:
+  stage: rollback
+  when: manual
+  resource_group: kaju-dev
+  environment:
+    name: development
+    url: https://dev.SEU-DOMINIO
+  script:
+    - |
+      if [ -z "$ROLLBACK_TAG" ]; then
+        echo "❌ Rode este job informando a variável ROLLBACK_TAG (ex.: dev-a1b2c3d)."
+        docker images --format '  {{.Tag}}' kaju-app | grep '^  dev-'
+        exit 1
+      fi
+    - docker tag kaju-app:$ROLLBACK_TAG kaju-app:dev-latest
+    - $DC up -d --no-build --force-recreate app
+    - |
+      for i in $(seq 1 40); do
+        curl -fsS "$APP_URL/api/health" && exit 0
+        sleep 3
+      done
+      echo "❌ Rollback subiu mas o healthcheck falhou."
+      exit 1

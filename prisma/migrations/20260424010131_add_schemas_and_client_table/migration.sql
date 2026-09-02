@@ -1,0 +1,45 @@
+-- CreateSchema
+CREATE SCHEMA IF NOT EXISTS "dbo";
+
+-- CreateTable
+CREATE TABLE "dbo"."TbCli" (
+    "CdCli" SERIAL NOT NULL,
+    "NmCli" VARCHAR(50) NOT NULL,
+    "TpCliNiv" INTEGER NOT NULL,
+    "xNaturezaID" INTEGER,
+    "CdPes" INTEGER,
+    "CdAve" INTEGER,
+    "NrCliDefPrz" INTEGER,
+    "CdPesFat" INTEGER,
+    "CdPesEnt" INTEGER,
+    "CdPesCob" INTEGER,
+    "QtCliEnt" INTEGER NOT NULL,
+    "CdInf" INTEGER,
+    "FlCliNaoAtv" INTEGER NOT NULL,
+    "FlCliTcb" INTEGER NOT NULL,
+    "DtCliInc" TIMESTAMP(3) NOT NULL,
+    "CdCliMae" INTEGER,
+    "CdCliMat" INTEGER,
+    "NrCliNiv" INTEGER NOT NULL,
+    "CdCli001" INTEGER,
+    "CdCli002" INTEGER,
+    "CdCli003" INTEGER,
+    "CdCli004" INTEGER,
+    "CdCli005" INTEGER,
+    "CdCli006" INTEGER,
+    "CdCli007" INTEGER,
+    "CdCli008" INTEGER,
+    "CdCli009" INTEGER,
+    "NrCliOrd001" INTEGER,
+    "NrCliOrd002" INTEGER,
+    "NrCliOrd003" INTEGER,
+    "NrCliOrd004" INTEGER,
+    "NrCliOrd005" INTEGER,
+    "NrCliOrd006" INTEGER,
+    "NrCliOrd007" INTEGER,
+    "NrCliOrd008" INTEGER,
+    "NrCliOrd009" INTEGER,
+    "Timestamp" BYTEA NOT NULL,
+
+    CONSTRAINT "TbCli_pkey" PRIMARY KEY ("CdCli")
+);

@@ -1,0 +1,258 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  schemas  = ["public", "dbo"]
+
+  
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  blocked       Boolean   @default(false)
+  roleId        String?
+  role          Role?     @relation(fields: [roleId], references: [id], onDelete: SetNull)
+  accounts      Account[]
+  createdPurchaseOrders PurchaseOrder[] @relation("PurchaseOrderCreatedBy")
+  updatedPurchaseOrders PurchaseOrder[] @relation("PurchaseOrderUpdatedBy")
+  purchaseOrderAudits   PurchaseOrderAudit[]
+  sessions      Session[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  @@schema("public")
+}
+
+/// Papel de acesso (RBAC). As chaves em `permissions` vêm do catálogo em
+/// código (src/lib/rbac/permissions.ts) — só a atribuição a papéis é dinâmica.
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  permissions String[]
+  /// Protege o papel "Administrador" embutido de edição/exclusão.
+  isSystem    Boolean  @default(false)
+  users       User[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  @@schema("public")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@schema("public")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@schema("public")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@schema("public")
+}
+
+model PurchaseOrder {
+  id              String   @id @default(cuid())
+  number          Int      @unique @default(autoincrement())
+  date            DateTime
+  clientId        String
+  clientName      String
+  clientCnpj      String?
+  paymentWay      String
+  paymentTerms    String
+  isPickup        Boolean  @default(true)
+  freightType     String?
+  freight         Decimal  @default(0) @db.Decimal(12, 2)
+  discountPercent Decimal  @default(0) @db.Decimal(5, 2)
+  discountAmount  Decimal  @default(0) @db.Decimal(12, 2)
+  subtotal        Decimal  @default(0) @db.Decimal(12, 2)
+  totalWeightKg   Decimal  @default(0) @db.Decimal(12, 2)
+  totalPrice      Decimal  @default(0) @db.Decimal(12, 2)
+  orderStatus     String   @default("Orçamento")
+  financialStatus String   @default("Aguardando pagamento")
+  stockStatus     String   @default("Estoque não reservado")
+  createdByUserId String
+  updatedByUserId String?
+  createdBy       User     @relation("PurchaseOrderCreatedBy", fields: [createdByUserId], references: [id])
+  updatedBy       User?    @relation("PurchaseOrderUpdatedBy", fields: [updatedByUserId], references: [id])
+  items           PurchaseOrderItem[]
+  audits          PurchaseOrderAudit[]
+  emails          PurchaseOrderEmail[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  @@schema("public")
+}
+
+model PurchaseOrderItem {
+  id              String        @id
+  purchaseOrderId String
+  productId       Int
+  boxType         String
+  boxWeightKg     Decimal       @db.Decimal(8, 2)
+  quantity        Int
+  pricePerKg      Decimal       @db.Decimal(12, 2)
+  totalWeightKg   Decimal       @db.Decimal(12, 2)
+  totalPrice      Decimal       @db.Decimal(12, 2)
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  @@schema("public")
+}
+
+model PurchaseOrderAudit {
+  id              String        @id @default(cuid())
+  purchaseOrderId String
+  userId          String?
+  action          String
+  details         Json
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  user            User?         @relation(fields: [userId], references: [id])
+  createdAt       DateTime      @default(now())
+  @@schema("public")
+}
+
+model PurchaseOrderEmail {
+  id              String        @id @default(cuid())
+  purchaseOrderId String
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  recipients      String[]
+  subject         String
+  body            String        @db.Text
+  sentBy          String
+  sentAt          DateTime      @default(now())
+
+  @@index([purchaseOrderId])
+  @@schema("public")
+}
+
+model EmailRecipient {
+  id               String             @id @default(cuid())
+  email            String             @unique
+  label            String?
+  useCount         Int                @default(1)
+  lastUsedAt       DateTime           @default(now())
+  labelMemberships EmailLabelMember[]
+
+  @@schema("public")
+}
+
+model EmailLabel {
+  id        String             @id @default(cuid())
+  name      String             @unique
+  createdAt DateTime           @default(now())
+  members   EmailLabelMember[]
+
+  @@schema("public")
+}
+
+model EmailLabelMember {
+  labelId     String
+  recipientId String
+  label       EmailLabel     @relation(fields: [labelId], references: [id], onDelete: Cascade)
+  recipient   EmailRecipient @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@id([labelId, recipientId])
+  @@schema("public")
+}
+
+model TbCli {
+  cdCli       Int      @id @default(autoincrement()) @map("CdCli")
+  nmCli       String   @map("NmCli") @db.VarChar(50)
+  tpCliNiv    Int      @map("TpCliNiv")
+  xNaturezaID Int?     @map("xNaturezaID")
+  cdPes       Int?     @map("CdPes")
+  cdAve       Int?     @map("CdAve")
+  nrCliDefPrz Int?     @map("NrCliDefPrz")
+  cdPesFat    Int?     @map("CdPesFat")
+  cdPesEnt    Int?     @map("CdPesEnt")
+  cdPesCob    Int?     @map("CdPesCob")
+  qtCliEnt    Int      @map("QtCliEnt")
+  cdInf       Int?     @map("CdInf")
+  flCliNaoAtv Int      @map("FlCliNaoAtv")
+  flCliTcb    Int      @map("FlCliTcb")
+  dtCliInc    DateTime @map("DtCliInc")
+
+  cdCliMae Int? @map("CdCliMae")
+  cdCliMat Int? @map("CdCliMat")
+  nrCliNiv Int  @map("NrCliNiv")
+
+  cdCli001 Int? @map("CdCli001")
+  cdCli002 Int? @map("CdCli002")
+  cdCli003 Int? @map("CdCli003")
+  cdCli004 Int? @map("CdCli004")
+  cdCli005 Int? @map("CdCli005")
+  cdCli006 Int? @map("CdCli006")
+  cdCli007 Int? @map("CdCli007")
+  cdCli008 Int? @map("CdCli008")
+  cdCli009 Int? @map("CdCli009")
+
+  nrCliOrd001 Int? @map("NrCliOrd001")
+  nrCliOrd002 Int? @map("NrCliOrd002")
+  nrCliOrd003 Int? @map("NrCliOrd003")
+  nrCliOrd004 Int? @map("NrCliOrd004")
+  nrCliOrd005 Int? @map("NrCliOrd005")
+  nrCliOrd006 Int? @map("NrCliOrd006")
+  nrCliOrd007 Int? @map("NrCliOrd007")
+  nrCliOrd008 Int? @map("NrCliOrd008")
+  nrCliOrd009 Int? @map("NrCliOrd009")
+
+  timestamp Bytes? @map("Timestamp")
+
+  nrPesCpj  String? @map("NrPesCpj") // da tabela TbPes
+
+  isActive Boolean @default(false)
+  registeredInV2 Boolean @default(false)
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@map("TbCli")
+  @@schema("dbo")
+}
+
+model UF {
+  id Int @id
+  nome String
+  municipios Municipio[]
+  @@schema("public")
+}
+
+
+model Municipio {
+  id Int @id
+  nome String
+  uf UF @relation(fields: [ufId], references: [id])
+  ufId  Int
+
+  @@schema("public")
+}

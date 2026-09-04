@@ -16,7 +16,7 @@ import { LogradouroService } from "@/lib/top-manager/service/logradouro/logradou
 import PessoaService from "@/lib/top-manager/service/pessoa/pessoa.service";
 import { capitalizeWords } from "@/utils/string-util";
 
-const db: Knex = getTopManagerDB("DESE");
+const db: Knex = getTopManagerDB("PROD");
 
 const localidadeRepository = LocalidadeRepository;
 const logradouroRepo = LogradouroRepository;
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
       page: searchParams.get("page") ?? "1",
       pageSize: searchParams.get("pageSize") ?? "10",
     });
-
+    console.log("Result from clienteService.list:", result);
     return NextResponse.json(result);
   } catch (error) {
     const message =

@@ -135,8 +135,8 @@ export default function ConsultarClientesPage() {
         if (!response.ok) {
           throw new Error(
             payload.error ??
-              payload.message ??
-              "Não foi possível consultar os clientes.",
+            payload.message ??
+            "Não foi possível consultar os clientes.",
           );
         }
 
@@ -228,8 +228,8 @@ export default function ConsultarClientesPage() {
       if (!response.ok) {
         throw new Error(
           payload.error ??
-            payload.message ??
-            "Não foi possível desativar o cliente.",
+          payload.message ??
+          "Não foi possível desativar o cliente.",
         );
       }
 
@@ -268,7 +268,7 @@ export default function ConsultarClientesPage() {
 
         <FilterBar className="flex flex-wrap items-end gap-4">
           <SearchField
-            className="w-full flex-1 sm:min-w-[280px]"
+            className="w-full flex-1 "
             name="search"
             value={searchQuery}
             onChange={(value) => {
@@ -296,7 +296,7 @@ export default function ConsultarClientesPage() {
               <Table.ScrollContainer>
                 <Table.Content
                   aria-label="Tabela de consulta de clientes"
-                  className="min-w-[920px]"
+                  className=""
                 >
                   <Table.Header>
                     <Table.Column id="codCliente" className="w-28">

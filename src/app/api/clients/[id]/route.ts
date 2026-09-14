@@ -14,7 +14,7 @@ function authAwareStatus(error: unknown) {
     : 400;
 }
 
-const db: Knex = getTopManagerDB("PROD");
+const db: Knex = getTopManagerDB("DESE");
 
 export async function GET(
   _request: NextRequest,

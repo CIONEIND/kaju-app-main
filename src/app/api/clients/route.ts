@@ -16,7 +16,7 @@ import { LogradouroService } from "@/lib/top-manager/service/logradouro/logradou
 import PessoaService from "@/lib/top-manager/service/pessoa/pessoa.service";
 import { capitalizeWords } from "@/utils/string-util";
 
-const db: Knex = getTopManagerDB("PROD");
+const db: Knex = getTopManagerDB("DESE");
 
 const localidadeRepository = LocalidadeRepository;
 const logradouroRepo = LogradouroRepository;

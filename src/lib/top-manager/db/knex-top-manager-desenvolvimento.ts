@@ -6,11 +6,11 @@ import knex, { Knex } from 'knex';
 const knexConfig: Knex.Config = {
   client: 'mssql',
   connection: {
-    server: process.env.SQLSERVER_PROD_HOST,     
-    user: process.env.SQLSERVER_PROD_USER,    
-    password: process.env.SQLSERVER_PROD_PASS,
-    port: parseInt(process.env.SQLSERVER_PROD_PORT!),
-    database: "TopManager",
+    server: process.env.SQL_SERVER_PROD_HOST,     
+    user: process.env.SQL_SERVER_PROD_USER,    
+    password: process.env.SQL_SERVER_PROD_PASS,
+    port: parseInt(process.env.SQL_SERVER_PROD_PORT!),
+    database: "TopTESTE",
     options: {
       // instanceName: process.env.SQL_SERVER_DEV_INSTANCE_NAME!,
       encrypt: true,

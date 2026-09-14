@@ -12,7 +12,7 @@ import type { CreateClienteSchemaType } from "./schemas";
 import { createClienteSchema, listClienteSchema } from "./schemas";
 
 export default class ClienteService {
-  private db: Knex = getTopManagerDB("PROD");
+  private db: Knex = getTopManagerDB("DESE");
   private clienteRepo = ClienteRepository;
 
   async create(createDTO: CreateClienteSchemaType, tsx: Knex = this.db) {

@@ -44,5 +44,6 @@ next-env.d.ts
 
 vpn-auth.txt
 config.ovpn
+*.dump
 
 src/generated/

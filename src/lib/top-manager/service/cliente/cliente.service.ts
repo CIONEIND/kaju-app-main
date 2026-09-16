@@ -1,6 +1,6 @@
 import type { Knex } from "knex";
 import type { CreateClientSchemaType } from "@/app/(protected)/clientes/schemas/clientAddress";
-import { getTopManagerDB } from "../../db/resolve-db";
+import {topManager} from "../../db/knex-topManger";
 import ClienteRepository from "../../repository/cliente/cliente.repository";
 import type {
   Cliente,
@@ -12,7 +12,7 @@ import type { CreateClienteSchemaType } from "./schemas";
 import { createClienteSchema, listClienteSchema } from "./schemas";
 
 export default class ClienteService {
-  private db: Knex = getTopManagerDB("DESE");
+  private db: Knex = topManager;
   private clienteRepo = ClienteRepository;
 
   async create(createDTO: CreateClienteSchemaType, tsx: Knex = this.db) {

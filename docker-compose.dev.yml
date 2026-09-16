@@ -1,50 +1,26 @@
-# Stack do AMBIENTE DE DESENVOLVIMENTO na VPS (branch `develop`).
-#
-# Não confundir com:
-#   - docker-compose.yml       → só o Postgres, para a máquina do dev
-#   - docker-compose.prod.yml  → produção (túnel OpenVPN + rede externa `database`)
-#
-# Este arquivo é sempre invocado pelo pipeline como:
-#   docker compose --env-file /srv/kaju-dev/.env -p kaju-dev -f docker-compose.dev.yml ...
-#
-# O `--env-file` serve para a interpolação (${...}) abaixo; o `env_file:` de cada
-# serviço é o que realmente injeta as variáveis dentro do container. Os dois são
-# necessários e apontam para o mesmo arquivo.
-
 name: kaju-dev
 
 services:
   postgres:
-    image: postgres:17-alpine
+    image: postgres:17.4
     container_name: kaju-dev-postgres
     restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:?defina POSTGRES_USER em /srv/kaju-dev/.env}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD em /srv/kaju-dev/.env}
-      POSTGRES_DB: ${POSTGRES_DB:-kaju_dev}
-    # Publicado só no loopback: acesso externo é via túnel SSH, nunca aberto.
-    ports:
-      - "127.0.0.1:5433:5432"
+    # env_file injeta POSTGRES_USER/PASSWORD/DB dentro do container.
+    # O bloco `environment:` foi removido de propósito: ele só interpolava
+    # ${...} do arquivo .env da raiz, e sem ele o Postgres nascia sem usuário.
+    env_file:
+      - ./.env
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - /volume/containers/kaju-dev/db:/var/lib/postgresql/data
     healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB:-kaju_dev}",
-        ]
-      interval: 5s
+      # $$… é lido DENTRO do container, então funciona com o env_file.
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
       timeout: 5s
-      retries: 20
+      retries: 5
     networks:
       - kaju-dev
 
-  # Serviço one-shot. Nunca sobe com `up`; o pipeline chama:
-  #   docker compose ... run --rm migrate
-  #   docker compose ... run --rm migrate npx prisma db seed
-  #
-  # Usa o estágio `builder` porque a imagem final (standalone) não carrega o CLI
-  # do Prisma, o schema, as migrations, o tsx nem os CSVs do seed.
   migrate:
     build:
       context: .
@@ -52,7 +28,7 @@ services:
     image: kaju-app:builder
     restart: "no"
     env_file:
-      - /srv/kaju-dev/.env
+      - ./.env.dev
     command: ["npx", "prisma", "migrate", "deploy"]
     depends_on:
       postgres:
@@ -60,43 +36,28 @@ services:
     networks:
       - kaju-dev
 
-  app:
+  kaju-app:
     build:
       context: .
-      target: runner-dev
     image: kaju-app:dev-latest
-    container_name: kaju-dev-app
+    container_name: kaju-app-dev
     restart: unless-stopped
     env_file:
-      - /srv/kaju-dev/.env
+      - ./.env.dev
     environment:
-      HOSTNAME: "0.0.0.0"
-      # Aparece em GET /api/health — serve para conferir qual commit está no ar.
-      APP_COMMIT: ${CI_COMMIT_SHORT_SHA:-local}
-      # Marca a stack como ambiente de dese. Fixo aqui (e não no .env da VPS) de
-      # propósito: é o que faz o assunto dos e-mails sair com o prefixo [DESE].
-      APP_ENV: dese
-    # Só loopback: quem expõe para a internet é o reverse proxy do host.
+      # Aparece em GET /api/health — qual versão está no ar
+      APP_COMMIT: ${APP_COMMIT:-local}
     ports:
-      - "127.0.0.1:3001:3000"
+      # host 3003 → container 3002
+      # O app escuta na 3002 por causa do `ENV PORT=3002` do Dockerfile,
+      # e o HEALTHCHECK da imagem também chama a 3002.
+      - "127.0.0.1:${APP_PORT:-3003}:3002"
     depends_on:
       postgres:
         condition: service_healthy
     networks:
       - kaju-dev
-      - kong_kong-net
 
 networks:
-  kong_kong-net:
-    external: true
   kaju-dev:
     name: kaju-dev
-    ipam:
-      config:
-        # Subnet fixa de propósito: a regra de MASQUERADE do WireGuard no host
-        # referencia exatamente esta faixa. Ver docs/deploy-dev.md.
-        - subnet: 172.28.10.0/24
-
-volumes:
-  pgdata:
-    name: kaju-dev-pgdata

@@ -4,7 +4,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { createClientSchema } from "@/app/(protected)/clientes/schemas/clientAddress";
 import { requirePermission } from "@/lib/rbac/access";
 import { PERMISSIONS } from "@/lib/rbac/permissions";
-import { getTopManagerDB } from "@/lib/top-manager/db/resolve-db";
+import { topManager } from '@/lib/top-manager/db/knex-topManger';
 import ClienteService from "@/lib/top-manager/service/cliente/cliente.service";
 import { saveAddress } from "../route";
 
@@ -14,7 +14,7 @@ function authAwareStatus(error: unknown) {
     : 400;
 }
 
-const db: Knex = getTopManagerDB("DESE");
+const db: Knex = topManager;
 
 export async function GET(
   _request: NextRequest,

@@ -1,5 +1,5 @@
 import { Knex } from "knex";
-import { getTopManagerDB } from "../../db/resolve-db";
+import { topManager } from '../../db/knex-topManger';
 import { CreatePessoaDTO } from "./types";
 import { Pessoa } from "../../repository/pessoa/types";
 import { createPessoaSchema, CreatePessoaSchemaType } from "./schemas";
@@ -8,7 +8,7 @@ import PessoaRepository from "../../repository/pessoa/pessoa.repository";
 
 
 export default class PessoaService {
-    private db: Knex = getTopManagerDB("DESE");
+    private db: Knex = topManager;
     private pessoaRepo = PessoaRepository;
 
     async create(createDTO: CreatePessoaSchemaType, tsx = this.db) {

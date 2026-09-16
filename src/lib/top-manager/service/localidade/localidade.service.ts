@@ -1,5 +1,6 @@
 import { Knex } from 'knex';
 import { getTopManagerDB } from '../../db/resolve-db'
+import { topManager } from '../../db/knex-topManger';
 import { CreateBairro } from './types';
 import LocalidadeRepository from '../../repository/localidade/localidadeRepository';
 import { Localidade, TipoLocalidade } from '../../repository/localidade/types';
@@ -9,7 +10,7 @@ import { getDdiByCountryName } from '@/utils/country/ddi';
 import { buildTtLoc, resolveCodLocs } from './helper';
 
 export class LocalidadeService {
-  private tsx: Knex = getTopManagerDB("DESE");
+  private tsx: Knex = topManager;
   private localidadeRepositoy = LocalidadeRepository;
 
   async createPais(nome: string, tsx = this.tsx): Promise<number> {

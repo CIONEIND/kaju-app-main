@@ -1,5 +1,6 @@
 import { Knex } from "knex";
-import { getTopManagerDB } from "../../db/resolve-db";
+
+import { topManager } from '../../db/knex-topManger';
 import TipoLogradouroRepository from "../../repository/logradouro/tipoLogradouroRepository";
 import LogradouroRepository from "../../repository/logradouro/lougradouroRepository";
 import LocalidadeRepository from "../../repository/localidade/localidadeRepository";
@@ -8,7 +9,7 @@ import { LigacaoLogradouro, Logradouro } from "../../repository/logradouro/types
 
 
 export class LogradouroService{
-    private tsx: Knex = getTopManagerDB("DESE");
+    private tsx: Knex = topManager;
     private tipLogRepository = TipoLogradouroRepository;
     private logRepository = LogradouroRepository;
     private localidadeRepository = LocalidadeRepository;

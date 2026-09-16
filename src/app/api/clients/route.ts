@@ -3,7 +3,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { createClientSchema } from "@/app/(protected)/clientes/schemas/clientAddress";
 import { requirePermission } from "@/lib/rbac/access";
 import { PERMISSIONS } from "@/lib/rbac/permissions";
-import { getTopManagerDB } from "@/lib/top-manager/db/resolve-db";
+import { topManager } from '@/lib/top-manager/db/knex-topManger';
 import LocalidadeRepository from "@/lib/top-manager/repository/localidade/localidadeRepository";
 import { TipoLocalidade } from "@/lib/top-manager/repository/localidade/types";
 import LigacaoLogradouroRepository from "@/lib/top-manager/repository/logradouro/ligacaoLogradouroRepository";
@@ -16,7 +16,7 @@ import { LogradouroService } from "@/lib/top-manager/service/logradouro/logradou
 import PessoaService from "@/lib/top-manager/service/pessoa/pessoa.service";
 import { capitalizeWords } from "@/utils/string-util";
 
-const db: Knex = getTopManagerDB("DESE");
+const db: Knex = topManager;
 
 const localidadeRepository = LocalidadeRepository;
 const logradouroRepo = LogradouroRepository;

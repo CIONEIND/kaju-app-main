@@ -101,7 +101,8 @@ export default function Sidebar({
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({});
-
+  const APP_ENV = (process.env.APP_ENV ?? "dev").toLowerCase();
+  const isProduction = ["prod", "producao", "production"].includes(APP_ENV);
   // React Compiler cuida da memoização — sem useMemo manual.
   const granted = new Set(permissions);
   const isGranted = (permission?: string) =>
@@ -153,6 +154,7 @@ export default function Sidebar({
               Kaju
             </p>
             <p className="truncate text-[11px] text-slate-500">Operações</p>
+            <p className="truncate text-[11px] text-slate-500">{isProduction ? "" : "desenvolvimento"}</p>
           </div>
         )}
         <Button

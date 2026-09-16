@@ -19,9 +19,8 @@ COPY . .
 # 3) Generate + build no MESMO RUN dos placeholders:
 #    o prisma.config.ts resolve env("DATABASE_URL") ao carregar,
 #    então a variável precisa existir ANTES do `prisma generate`.
-RUN export DATABASE_URL="postgresql://build:build@127.0.0.1:5433/build" && \
-    export SQL_SERVER_DEV_HOST=build SQL_SERVER_DEV_USER=build SQL_SERVER_DEV_PASS=build SQL_SERVER_DEV_PORT=1433 && \
-    export SQL_SERVER_PROD_HOST=build SQL_SERVER_PROD_USER=build SQL_SERVER_PROD_PASS=build SQL_SERVER_PROD_PORT=1433 && \
+RUN export DATABASE_URL="postgresql://build:build@127.0.0.1:5432/build" && \
+    export SQL_SERVER_HOST=build SQL_SERVER_USER=build SQL_SERVER_PASS=build SQL_SERVER_PORT=1433 && \
     export RESEND_API_KEY=re_build_placeholder && \
     npx prisma generate && \
     npm run build

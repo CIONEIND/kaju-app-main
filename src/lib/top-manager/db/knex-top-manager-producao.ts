@@ -24,17 +24,17 @@ function optionalEnv(name: string): string | undefined {
   return process.env[name]?.trim() || undefined;
 }
 
-const sqlServerProdHost = requiredEnv("SQL_SERVER_PROD_HOST");
-const sqlServerProdUser = requiredEnv("SQL_SERVER_PROD_USER");
-const sqlServerProdPass = requiredEnv("SQL_SERVER_PROD_PASS");
-const sqlServerProdPort = requiredEnvNumber("SQL_SERVER_PROD_PORT");
+const sqlServerProdHost = requiredEnv("SQL_SERVER_HOST");
+const sqlServerProdUser = requiredEnv("SQL_SERVER_USER");
+const sqlServerProdPass = requiredEnv("SQL_SERVER_PASS");
+const sqlServerProdPort = requiredEnvNumber("SQL_SERVER_PORT");
 
 // Optional on purpose. A named instance is resolved through the SQL Server
 // Browser service (UDP 1434), which only exists on the DBA-managed server —
 // tedious ignores `port` entirely once `instanceName` is set. Locally there is
 // no browser service, so leaving SQL_SERVER_PROD_INSTANCE_NAME empty omits the
 // key and the connection goes straight to host:port.
-const sqlServerProdInstanceName = optionalEnv("SQL_SERVER_PROD_INSTANCE_NAME");
+const sqlServerProdInstanceName = optionalEnv("SQL_SERVER_INSTANCE_NAME");
 
 const knexConfig: Knex.Config = {
   client: "mssql",

@@ -26,7 +26,7 @@ export async function POST(request: Request) {
 
     if (!imageBase64) {
       return Response.json(
-        { message: "Falha ao gerar o relatório em PDF." },
+        { message: "Falha ao gerar a imagem do relatório." },
         { status: 400 },
       );
     }
@@ -34,17 +34,15 @@ export async function POST(request: Request) {
     // Fora da produção o assunto vai marcado com [DESE]
     const finalSubject = applyDeseSubjectPrefix(subject);
 
-    // Strip data URI prefix if present
-    const base64Data = imageBase64.replace(/^data:image\/png;base64,/, "");
+    // Remove qualquer prefixo Data URI de imagem png/jpeg
+    const base64Data = imageBase64.replace(/^data:image\/(png|jpeg|jpg);base64,/, "");
 
     const fileDate = new Date().toISOString().slice(0, 10);
 
     const bodyHtml = `
       <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#0f172a;max-width:720px;margin:0 auto;">
         ${body ? `<p style="font-size:15px;line-height:1.6;margin-bottom:24px;">${body.replace(/\n/g, "<br/>")}</p>` : ""}
-        <p style="font-size:14px;line-height:1.6;color:#334155;">
-          Segue em anexo o relatório de posição de estoque em PDF.
-        </p>
+        <img src="cid:stock-report-image" alt="Relatório de Posição de Estoque - ${fileDate}" style="max-width:100%;border-radius:8px;" />
       </div>
     `;
 
@@ -56,7 +54,8 @@ export async function POST(request: Request) {
       attachments: [
         {
           content: base64Data,
-          filename: `posicao-estoque-${fileDate}.pdf`,
+          filename: `posicao-estoque-${fileDate}.png`,
+          contentId: "stock-report-image",
         },
       ],
     });
@@ -69,7 +68,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Upsert each recipient into EmailRecipient (feeds the "Recentes" list)
+    // Upsert em cada destinatário para popular a lista de "Recentes"
     await Promise.all(
       recipients.map((email) =>
         prisma.emailRecipient.upsert({

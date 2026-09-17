@@ -31,6 +31,8 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # env files (can opt-in for committing if needed)
+/srv/kaju/dev/.env
+/srv/kaju/prod/.env
 .env*
 !.env.example
 !.env.dev.example

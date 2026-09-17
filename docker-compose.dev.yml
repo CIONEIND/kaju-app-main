@@ -9,7 +9,7 @@ services:
     # O bloco `environment:` foi removido de propósito: ele só interpolava
     # ${...} do arquivo .env da raiz, e sem ele o Postgres nascia sem usuário.
     env_file:
-      - ./.env
+      - ./srv/kaju/dev/.env
     volumes:
       - /volume/containers/kaju-dev/db:/var/lib/postgresql/data
     healthcheck:

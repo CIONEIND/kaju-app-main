@@ -1,0 +1,49 @@
+name: Deploy Dev
+
+on:
+  push:
+    branches: [develop]
+  workflow_dispatch:          # permite disparo manual pelo painel
+
+concurrency:
+  group: kaju-dev-deploy
+  cancel-in-progress: false   # não derruba um deploy em andamento
+
+jobs:
+  deploy:
+    name: Build, Migrate & Deploy (dev)
+    runs-on: [self-hosted, kaju-vps]
+    env:
+      APP_COMMIT: ${{ github.sha }}   # healthcheck reporta o commit
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build imagens
+        run: |
+          docker compose -p kaju-dev -f docker-compose.dev.yml build
+          # tag por commit permite rollback
+          docker tag kaju-app:dev-latest kaju-app:dev-${GITHUB_SHA::7}
+
+      - name: Aplicar migrations
+        run: |
+          docker compose -p kaju-dev -f docker-compose.dev.yml run --rm migrate
+
+      - name: Subir aplicação
+        run: |
+          docker compose -p kaju-dev -f docker-compose.dev.yml up -d kaju-app
+
+      - name: Verificar healthcheck
+        run: |
+          ENDPOINT=http://127.0.0.1:3003/api/health
+          for i in $(seq 1 40); do
+            if curl -fsS "$ENDPOINT"; then
+              echo ""
+              echo "Dev operacional"
+              exit 0
+            fi
+            echo "Aguardando app ($i/40)..."
+            sleep 3
+          done
+          docker compose -p kaju-dev -f docker-compose.dev.yml logs --tail 100 kaju-app
+          exit 1

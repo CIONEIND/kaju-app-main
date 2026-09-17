@@ -7,6 +7,8 @@ README.md
 .git
 
 # Segredos — nunca devem entrar no contexto de build
+/srv/kaju/dev/.env
+/srv/kaju/prod/.env
 .env
 .env.*
 !.env.example

@@ -8,13 +8,13 @@ interface SendEmailBody {
   recipients: string[];
   subject: string;
   body: string;
-  imageBase64: string;
+  pdfBase64: string;
 }
 
 export async function POST(request: Request) {
   try {
     await requirePermission(PERMISSIONS.STOCK_VIEW);
-    const { recipients, subject, body, imageBase64 }: SendEmailBody =
+    const { recipients, subject, body, pdfBase64 }: SendEmailBody =
       await request.json();
 
     if (!recipients?.length) {
@@ -24,9 +24,9 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!imageBase64) {
+    if (!pdfBase64) {
       return Response.json(
-        { message: "Falha ao gerar a imagem do relatório." },
+        { message: "Falha ao gerar o relatório em PDF." },
         { status: 400 },
       );
     }
@@ -34,15 +34,17 @@ export async function POST(request: Request) {
     // Fora da produção o assunto vai marcado com [DESE]
     const finalSubject = applyDeseSubjectPrefix(subject);
 
-    // Remove qualquer prefixo Data URI de imagem png/jpeg
-    const base64Data = imageBase64.replace(/^data:image\/(png|jpeg|jpg);base64,/, "");
+    // Strip data URI prefix if present
+    const base64Data = pdfBase64.replace(/^data:application\/pdf;base64,/, "");
 
     const fileDate = new Date().toISOString().slice(0, 10);
 
     const bodyHtml = `
       <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#0f172a;max-width:720px;margin:0 auto;">
         ${body ? `<p style="font-size:15px;line-height:1.6;margin-bottom:24px;">${body.replace(/\n/g, "<br/>")}</p>` : ""}
-        <img src="cid:stock-report-image" alt="Relatório de Posição de Estoque - ${fileDate}" style="max-width:100%;border-radius:8px;" />
+        <p style="font-size:14px;line-height:1.6;color:#334155;">
+          Segue em anexo o relatório de posição de estoque em PDF.
+        </p>
       </div>
     `;
 
@@ -54,8 +56,7 @@ export async function POST(request: Request) {
       attachments: [
         {
           content: base64Data,
-          filename: `posicao-estoque-${fileDate}.png`,
-          contentId: "stock-report-image",
+          filename: `posicao-estoque-${fileDate}.pdf`,
         },
       ],
     });
@@ -68,7 +69,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Upsert em cada destinatário para popular a lista de "Recentes"
+    // Upsert each recipient into EmailRecipient (feeds the "Recentes" list)
     await Promise.all(
       recipients.map((email) =>
         prisma.emailRecipient.upsert({

@@ -30,7 +30,7 @@ services:
     image: kaju-app:builder
     restart: "no"
     env_file:
-      - ./.env
+      - ./srv/kaju/prod/.env
     command: ["npx", "prisma", "migrate", "deploy"]
     depends_on:
       postgres:
@@ -45,7 +45,7 @@ services:
     container_name: kaju-app-prod
     restart: unless-stopped
     env_file:
-      - ./.env
+      - ./srv/kaju/prod/.env
     environment:
       # Aparece em GET /api/health — qual versão está no ar
       APP_COMMIT: ${APP_COMMIT:-local}

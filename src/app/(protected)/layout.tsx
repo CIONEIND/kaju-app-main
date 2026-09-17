@@ -18,11 +18,14 @@ export default async function ProtectedLayout({
 
   const permissions = [...access.permissions];
 
+  const APP_ENV = (process.env.APP_ENV ?? "dev").toLowerCase();
+  const isProduction = ["prod", "producao", "production"].includes(APP_ENV);
+
   return (
     <Providers>
       <PermissionsProvider permissions={permissions}>
         <div className="flex h-screen w-full overflow-hidden bg-background text-foreground">
-          <Sidebar permissions={permissions} />
+          <Sidebar isProduction={isProduction} permissions={permissions} />
           <main className="flex-1 overflow-y-auto">
             <div className="mx-auto w-full px-4 py-5 sm:px-6 lg:px-8">
               {children}

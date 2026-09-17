@@ -37,6 +37,11 @@ type MenuItem = {
   requiresPermission?: string;
 };
 
+interface SidebarProps {
+  permissions?: string[];
+  isProduction?: boolean;
+}
+
 const menuItems: MenuItem[] = [
   {
     name: "Dashboard",
@@ -95,14 +100,12 @@ function isActivePath(pathname: string, href: string) {
 
 export default function Sidebar({
   permissions = [],
-}: {
-  permissions?: string[];
-}) {
+  isProduction = false,
+}: SidebarProps) {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({});
-  const APP_ENV = (process.env.APP_ENV ?? "dev").toLowerCase();
-  const isProduction = ["prod", "producao", "production"].includes(APP_ENV);
+
   // React Compiler cuida da memoização — sem useMemo manual.
   const granted = new Set(permissions);
   const isGranted = (permission?: string) =>
@@ -154,7 +157,11 @@ export default function Sidebar({
               Kaju
             </p>
             <p className="truncate text-[11px] text-slate-500">Operações</p>
-            <p className="truncate text-[11px] text-slate-500">{isProduction ? "" : "desenvolvimento"}</p>
+            {!isProduction && (
+              <p className="truncate text-[11px] font-medium text-amber-500">
+                desenvolvimento
+              </p>
+            )}
           </div>
         )}
         <Button

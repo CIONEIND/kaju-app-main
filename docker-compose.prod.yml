@@ -2,19 +2,13 @@ name: kaju-prod
 
 services:
   postgres:
-    #image: postgres:17-alpine
     image: postgres:17.4
     container_name: kaju-prod-postgres
     restart: unless-stopped
     env_file:
       - /srv/kaju/prod/.env
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB:-kaju}
     volumes:
-      - /volume/containers/kaju/db:/var/lib/postgresql/data
-      #- pgdata:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 10s
@@ -31,6 +25,7 @@ services:
     restart: "no"
     env_file:
       - /srv/kaju/prod/.env
+         # - . /.env  
     command: ["npx", "prisma", "migrate", "deploy"]
     depends_on:
       postgres:
@@ -45,6 +40,7 @@ services:
     container_name: kaju-app-prod
     restart: unless-stopped
     env_file:
+      # - . /.env
       - /srv/kaju/prod/.env
     environment:
       # Aparece em GET /api/health — qual versão está no ar

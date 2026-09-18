@@ -9,7 +9,7 @@ services:
     # O bloco `environment:` foi removido de propósito: ele só interpolava
     # ${...} do arquivo .env da raiz, e sem ele o Postgres nascia sem usuário.
     env_file:
-      - ./srv/kaju/dev/.env
+      - /srv/kaju/dev/.env
     volumes:
       - /volume/containers/kaju-dev/db:/var/lib/postgresql/data
     healthcheck:
@@ -28,7 +28,7 @@ services:
     image: kaju-dev-app:builder
     restart: "no"
     env_file:
-      - ./srv/kaju/dev/.env
+      - /srv/kaju/dev/.env
     command: ["npx", "prisma", "migrate", "deploy"]
     depends_on:
       postgres:
@@ -43,7 +43,7 @@ services:
     container_name: kaju-app-dev
     restart: unless-stopped
     env_file:
-      - ./srv/kaju/dev/.env
+      - /srv/kaju/dev/.env
     environment:
       # Aparece em GET /api/health — qual versão está no ar
       APP_COMMIT: ${APP_COMMIT:-local}

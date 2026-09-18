@@ -8,13 +8,13 @@ interface SendEmailBody {
   recipients: string[];
   subject: string;
   body: string;
-  imageBase64: string;
+  pdfBase64: string;
 }
 
 export async function POST(request: Request) {
   try {
     await requirePermission(PERMISSIONS.STOCK_VIEW);
-    const { recipients, subject, body, imageBase64 }: SendEmailBody =
+    const { recipients, subject, body, pdfBase64 }: SendEmailBody =
       await request.json();
 
     if (!recipients?.length) {
@@ -24,7 +24,7 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!imageBase64) {
+    if (!pdfBase64) {
       return Response.json(
         { message: "Falha ao gerar o relatório em PDF." },
         { status: 400 },
@@ -35,7 +35,7 @@ export async function POST(request: Request) {
     const finalSubject = applyDeseSubjectPrefix(subject);
 
     // Strip data URI prefix if present
-    const base64Data = imageBase64.replace(/^data:image\/png;base64,/, "");
+    const base64Data = pdfBase64.replace(/^data:application\/pdf;base64,/, "");
 
     const fileDate = new Date().toISOString().slice(0, 10);
 

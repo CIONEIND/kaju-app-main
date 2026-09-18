@@ -13,17 +13,17 @@ com `docker-compose.prod.yml` (túnel OpenVPN + rede externa `database`).
 push em develop
       │
       ▼
-GitLab.com dispara o pipeline
+Github.com dispara o pipeline
       │
       ▼
-GitLab Runner self-hosted (executor shell) — roda DENTRO da própria VPS
+Github Runner self-hosted (executor shell) — roda DENTRO da própria VPS
       │
       ├─ lint      docker run kaju-app:builder npm run lint      (não bloqueia)
       ├─ build     docker compose build  →  kaju-app:dev-latest
       │                                  →  kaju-app:dev-<sha>   (para rollback)
       ├─ migrate   docker compose run --rm migrate  (migrate deploy + db seed)
       ├─ deploy    docker compose up -d app         (127.0.0.1:3001)
-      └─ verify    curl http://127.0.0.1:3001/api/health
+      └─ verify    curl http://127.0.0.1:3003/api/health
                           │
                           ▼
                    reverse proxy do host  →  https://dev.SEU-DOMINIO
@@ -35,7 +35,7 @@ Não há registry nem SSH: o runner constrói e sobe a stack na mesma máquina.
 
 | Serviço | Container | Porta | Observação |
 | --- | --- | --- | --- |
-| `app` | `kaju-dev-app` | `127.0.0.1:3001` | Estágio `runner-dev` do Dockerfile — **sem** OpenVPN |
+| `app` | `kaju-dev-app` | `127.0.0.1:3003` | Estágio `runner-dev` do Dockerfile — **sem** OpenVPN |
 | `postgres` | `kaju-dev-postgres` | `127.0.0.1:5433` | Volume `kaju-dev-pgdata`, exclusivo do dev |
 | `migrate` | one-shot | — | Estágio `builder`; só roda via `compose run --rm` |
 

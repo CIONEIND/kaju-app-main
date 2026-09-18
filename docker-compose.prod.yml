@@ -60,3 +60,5 @@ services:
 networks:
   kaju-prod:
     name: kaju-prod
+volumes:
+  pgdata:

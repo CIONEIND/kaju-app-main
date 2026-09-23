@@ -156,7 +156,7 @@ export default function Sidebar({
             <p className="truncate text-sm font-semibold leading-5 tracking-tight">
               Kaju
             </p>
-            <p className="truncate text-[11px] text-slate-500">Hello Operações</p>
+            <p className="truncate text-[11px] text-slate-500"> Operações</p>
             {!isProduction && (
               <p className="truncate text-[11px] font-medium text-amber-500">
                 desenvolvimento

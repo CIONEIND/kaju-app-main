@@ -5,6 +5,8 @@ services:
     image: postgres:17.4
     container_name: kaju-dev-postgres
     restart: unless-stopped
+    ports:
+      - "0.0.0.0:5433:5432"  
     # env_file injeta POSTGRES_USER/PASSWORD/DB dentro do container.
     # O bloco `environment:` foi removido de propósito: ele só interpolava
     # ${...} do arquivo .env da raiz, e sem ele o Postgres nascia sem usuário.

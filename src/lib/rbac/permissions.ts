@@ -22,6 +22,9 @@ export const PERMISSIONS = {
   CLIENTS_SAVE: "clients:save",
   // Configurações
   EMAIL_LABELS_MANAGE: "emailLabels:manage",
+  // Produção
+  PRODUCTION_VIEW: "production:view",
+  PRODUCTION_SAVE: "production:save",
   // Administração
   RBAC_MANAGE: "rbac:manage",
 } as const;
@@ -102,6 +105,21 @@ export const PERMISSION_CATALOG: PermissionCategory[] = [
         key: PERMISSIONS.EMAIL_LABELS_MANAGE,
         label: "Gerenciar etiquetas de e-mail",
         description: "Criar, editar e remover etiquetas de e-mail.",
+      },
+    ],
+  },
+  {
+    category: "Produção",
+    permissions: [
+      {
+        key: PERMISSIONS.PRODUCTION_VIEW,
+        label: "Visualizar produção",
+        description: "Acessar informações sobre o processo de produção.",
+      },
+      {
+        key: PERMISSIONS.PRODUCTION_SAVE,
+        label: "Cadastrar e editar produção",
+        description: "Criar e alterar registros de produção.",
       },
     ],
   },

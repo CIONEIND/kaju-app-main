@@ -76,6 +76,27 @@ const menuItems: MenuItem[] = [
     ],
   },
   {
+    name: "Produção",
+    icon: Settings,
+    subItems: [
+      {
+        name: "Etiquetas de e-mail",
+        href: "/producao/",
+        requiresPermission: PERMISSIONS.EMAIL_LABELS_MANAGE,
+      },
+      {
+        name: "Visualizar produção",
+        href: "/producao/visualizar",
+        requiresPermission: PERMISSIONS.PRODUCTION_VIEW,
+      },
+      {
+        name: "Cadastrar produção",
+        href: "/producao/cadastrar",
+        requiresPermission: PERMISSIONS.PRODUCTION_SAVE,
+      },
+    ],
+  },
+  {
     name: "Configurações",
     icon: Settings,
     subItems: [
@@ -143,9 +164,8 @@ export default function Sidebar({
 
   return (
     <aside
-      className={`flex h-screen shrink-0 flex-col border-r border-white/[0.06] bg-[#0f1621] text-white transition-all duration-300 ease-in-out ${
-        isCollapsed ? "w-[76px]" : "w-[264px]"
-      }`}
+      className={`flex h-screen shrink-0 flex-col border-r border-white/[0.06] bg-[#0f1621] text-white transition-all duration-300 ease-in-out ${isCollapsed ? "w-[76px]" : "w-[264px]"
+        }`}
     >
       <div className="flex h-16 items-center gap-3 border-b border-white/[0.07] px-4">
         <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent text-sm font-black tracking-tight text-white shadow-lg shadow-accent/30">
@@ -166,9 +186,8 @@ export default function Sidebar({
         )}
         <Button
           aria-label={isCollapsed ? "Expandir menu" : "Recolher menu"}
-          className={`ml-auto text-slate-500 hover:bg-white/[0.07] hover:text-slate-300 ${
-            isCollapsed ? "mx-auto" : ""
-          }`}
+          className={`ml-auto text-slate-500 hover:bg-white/[0.07] hover:text-slate-300 ${isCollapsed ? "mx-auto" : ""
+            }`}
           isIconOnly
           onPress={() => setIsCollapsed(!isCollapsed)}
           variant="ghost"
@@ -192,9 +211,8 @@ export default function Sidebar({
                     <Tooltip.Trigger>
                       <Button
                         aria-label={item.name}
-                        className={`w-full text-slate-400 hover:bg-white/[0.07] hover:text-slate-200 ${
-                          hasActiveChild ? "bg-white/[0.09] text-white" : ""
-                        }`}
+                        className={`w-full text-slate-400 hover:bg-white/[0.07] hover:text-slate-200 ${hasActiveChild ? "bg-white/[0.09] text-white" : ""
+                          }`}
                         isIconOnly
                         onPress={() => toggleSubMenu(item.name)}
                         variant="ghost"
@@ -208,9 +226,8 @@ export default function Sidebar({
                   </Tooltip>
                 ) : (
                   <Button
-                    className={`h-10 w-full justify-between rounded-lg px-3 font-medium text-slate-400 hover:bg-white/[0.07] hover:text-slate-200 ${
-                      hasActiveChild ? "bg-white/[0.09] text-slate-200" : ""
-                    }`}
+                    className={`h-10 w-full justify-between rounded-lg px-3 font-medium text-slate-400 hover:bg-white/[0.07] hover:text-slate-200 ${hasActiveChild ? "bg-white/[0.09] text-slate-200" : ""
+                      }`}
                     onPress={() => toggleSubMenu(item.name)}
                     variant="ghost"
                   >
@@ -236,11 +253,10 @@ export default function Sidebar({
 
                       return (
                         <Link
-                          className={`rounded-md px-3 py-[7px] text-[13px] transition-colors ${
-                            isActive
-                              ? "bg-accent/[0.18] font-semibold text-white"
-                              : "text-slate-500 hover:bg-white/[0.06] hover:text-slate-200"
-                          }`}
+                          className={`rounded-md px-3 py-[7px] text-[13px] transition-colors ${isActive
+                            ? "bg-accent/[0.18] font-semibold text-white"
+                            : "text-slate-500 hover:bg-white/[0.06] hover:text-slate-200"
+                            }`}
                           href={subItem.href}
                           key={subItem.name}
                         >

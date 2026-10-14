@@ -80,19 +80,9 @@ const menuItems: MenuItem[] = [
     icon: Settings,
     subItems: [
       {
-        name: "Etiquetas de e-mail",
+        name: "Central de Análises",
         href: "/producao/",
         requiresPermission: PERMISSIONS.EMAIL_LABELS_MANAGE,
-      },
-      {
-        name: "Visualizar produção",
-        href: "/producao/visualizar",
-        requiresPermission: PERMISSIONS.PRODUCTION_VIEW,
-      },
-      {
-        name: "Cadastrar produção",
-        href: "/producao/cadastrar",
-        requiresPermission: PERMISSIONS.PRODUCTION_SAVE,
       },
     ],
   },

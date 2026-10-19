@@ -6,7 +6,7 @@
 "use client";
 
 import { useState } from "react";
-import { TIPOS_FORMULARIO } from "./mock-analises";
+import { TIPOS_FORMULARIO } from "@/mocks/mock-analises";
 import type { Processo } from "@/app/(protected)/(producao)/producao/types";
 
 interface Props {

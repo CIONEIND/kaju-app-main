@@ -21,4 +21,10 @@ export interface UserSummary {
   email: string | null;
   blocked: boolean;
   role: { id: string; name: string } | null;
+  cdUsrTopManager: number | null; // novo
+}
+
+export interface TopManagerUserSummary {
+  cdUsr: number;
+  nmUsr: string;
 }

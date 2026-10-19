@@ -2,7 +2,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { TIPOS_FORMULARIO } from "./mock-analises";
+import { TIPOS_FORMULARIO } from "@/mocks/mock-analises";
 
 interface Props {
     aberto: boolean;

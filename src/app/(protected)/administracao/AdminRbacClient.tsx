@@ -13,11 +13,12 @@ import { Lock, Pencil, Plus, ShieldCheck, Trash2, Users } from "lucide-react";
 import { useState } from "react";
 import {
   assignUserRole,
+  assignUserTopManagerLink,
   createRole,
   deleteRole,
   updateRole,
 } from "@/app/services/admin/rbacService";
-import type { RoleSummary, UserSummary } from "@/app/services/admin/rbacTypes";
+import type { RoleSummary, TopManagerUserSummary, UserSummary } from "@/app/services/admin/rbacTypes";
 import { PageHeader, PageShell } from "@/components/ui/page";
 import { PERMISSION_CATALOG, PERMISSIONS } from "@/lib/rbac/permissions";
 
@@ -27,6 +28,7 @@ interface AdminRbacClientProps {
   currentUserId: string;
   initialRoles: RoleSummary[];
   initialUsers: UserSummary[];
+  initialTopManagerUsers: TopManagerUserSummary[];
 }
 
 const NO_ROLE_KEY = "none";
@@ -35,6 +37,7 @@ export function AdminRbacClient({
   currentUserId,
   initialRoles,
   initialUsers,
+  initialTopManagerUsers,
 }: AdminRbacClientProps) {
   const [tab, setTab] = useState<Tab>("usuarios");
   const [roles, setRoles] = useState<RoleSummary[]>(initialRoles);
@@ -74,6 +77,7 @@ export function AdminRbacClient({
           }
           roles={roles}
           users={users}
+          topManagerUsers={initialTopManagerUsers}
         />
       ) : (
         <RolesPanel
@@ -104,11 +108,10 @@ function TabButton({
 }) {
   return (
     <button
-      className={`flex items-center gap-2 rounded-md px-3.5 py-1.5 text-[13px] font-medium transition-colors ${
-        isActive
-          ? "bg-accent text-white shadow-sm"
-          : "text-muted hover:text-foreground"
-      }`}
+      className={`flex items-center gap-2 rounded-md px-3.5 py-1.5 text-[13px] font-medium transition-colors ${isActive
+        ? "bg-accent text-white shadow-sm"
+        : "text-muted hover:text-foreground"
+        }`}
       onClick={onSelect}
       type="button"
     >
@@ -125,14 +128,32 @@ function UsersPanel({
   roles,
   currentUserId,
   onUserUpdated,
+  topManagerUsers,
 }: {
   users: UserSummary[];
   roles: RoleSummary[];
   currentUserId: string;
   onUserUpdated: (user: UserSummary) => void;
+  topManagerUsers: TopManagerUserSummary[];
 }) {
   const [savingUserId, setSavingUserId] = useState<string | null>(null);
+  const NO_LINK_KEY = "sem-vinculo";
 
+  async function handleAssignVinculo(userId: string, key: string) {
+    const cdUsr = key === NO_LINK_KEY ? null : Number(key);
+    setSavingUserId(userId);
+    try {
+      const result = await assignUserTopManagerLink(userId, cdUsr);
+      if (!result.success) {
+        toast(result.error);
+        return;
+      }
+      onUserUpdated(result.user!);
+      toast("Vínculo TopManager atualizado.");
+    } finally {
+      setSavingUserId(null);
+    }
+  }
   async function handleAssign(userId: string, key: string) {
     const roleId = key === NO_ROLE_KEY ? null : key;
     setSavingUserId(userId);

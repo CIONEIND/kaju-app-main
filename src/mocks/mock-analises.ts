@@ -1,5 +1,5 @@
 // src/app/(producao)/producao/mock-analises.ts
-import type { Analise, TipoFormulario } from "../../../app/(protected)/(producao)/producao/types";
+import type { Analise, TipoFormulario } from "@/app/(protected)/(producao)/producao/types";
 
 
 

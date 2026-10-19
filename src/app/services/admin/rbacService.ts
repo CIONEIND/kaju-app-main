@@ -4,7 +4,9 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac/access";
 import { isPermission, PERMISSIONS } from "@/lib/rbac/permissions";
-import type { RoleSummary, UserSummary } from "./rbacTypes";
+import type { RoleSummary, TopManagerUserSummary, UserSummary } from "./rbacTypes";
+import { getUsuarioAtual } from "@/lib/auth/auth";
+import { topManagerProducao } from "@/lib/top-manager/db/knex-top-manager-producao";
 
 // ─── Resultados (formas planas, prontas para o client) ──────────────────────
 
@@ -136,6 +138,7 @@ export async function listUsers(): Promise<UserSummary[]> {
       name: true,
       email: true,
       blocked: true,
+      cdUsrTopManager: true,
       role: { select: { id: true, name: true } },
     },
     orderBy: [{ name: "asc" }, { email: "asc" }],
@@ -354,6 +357,7 @@ export async function assignUserRole(
         name: true,
         email: true,
         blocked: true,
+        cdUsrTopManager: true,
         role: { select: { id: true, name: true } },
       },
     });
@@ -365,4 +369,84 @@ export async function assignUserRole(
       error: error instanceof Error ? error.message : "Erro ao atribuir papel.",
     };
   }
+}
+
+export async function assignUserTopManagerLink(
+  userId: string,
+  cdUsrTopManager: number | null,
+): Promise<{ success: boolean; user?: UserSummary; error?: string }> {
+  try {
+    // 1. Autorização — só ADMIN altera vínculos
+    const admin = await getUsuarioAtual();
+    if (!admin || admin.role !== "ADMIN") {
+      return { success: false, error: "Não autorizado." };
+    }
+
+    // 2. Validação do valor — inteiro positivo ou null (sem vínculo)
+    if (
+      cdUsrTopManager !== null &&
+      (!Number.isInteger(cdUsrTopManager) || cdUsrTopManager <= 0)
+    ) {
+      return { success: false, error: "CdUsr deve ser um número inteiro positivo." };
+    }
+
+    // 3. Vínculo 1:1 — outro usuário Kaju já usa este CdUsr?
+    if (cdUsrTopManager !== null) {
+      const emUso = await prisma.user.findFirst({
+        where: { cdUsrTopManager, id: { not: userId } },
+        select: { email: true },
+      });
+      if (emUso) {
+        return {
+          success: false,
+          error: `Este CdUsr já está vinculado ao usuário ${emUso.email}.`,
+        };
+      }
+    }
+
+    // 4. Gravação
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: { cdUsrTopManager },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        blocked: true,
+        cdUsrTopManager: true,
+        role: { select: { id: true, name: true } },
+      },
+    });
+
+    // 5. Mapear para UserSummary no MESMO formato que o assignUserRole retorna
+    //    (ADAPTAR: copie o mapeamento exato que o assignUserRole usa)
+    const userSummary: UserSummary = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      blocked: user.blocked,
+      cdUsrTopManager: user.cdUsrTopManager,
+      role: user.role,
+    };
+
+    return { success: true, user: userSummary };
+  } catch (error) {
+    console.error("[assignUserTopManagerLink]", error);
+    return { success: false, error: "Erro ao salvar vínculo com o TopManager." };
+  }
+}
+
+export async function listTopManagerUsers(): Promise<TopManagerUserSummary[]> {
+  await requirePermission(PERMISSIONS.RBAC_MANAGE);
+   const result = await topManagerProducao
+      .select("Usr.CdUsr as cdUsr", "Usr.NmUsr as nmUsr")
+      .from("TbUsr as Usr")     
+      .where("Usr.FlUsr", "=", 1) // Filtra apenas usuários ativos
+      .orderBy("Usr.CdUsr", "asc");
+  
+        return result.map((row) => ({
+        cdUsr: row.cdUsr,
+        nmUsr: row.nmUsr,
+  }));
+
 }

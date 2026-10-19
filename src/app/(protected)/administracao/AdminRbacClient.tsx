@@ -1,5 +1,4 @@
 "use client";
-
 import {
   Button,
   Label,
@@ -18,7 +17,11 @@ import {
   deleteRole,
   updateRole,
 } from "@/app/services/admin/rbacService";
-import type { RoleSummary, TopManagerUserSummary, UserSummary } from "@/app/services/admin/rbacTypes";
+import type {
+  RoleSummary,
+  TopManagerUserSummary,
+  UserSummary,
+} from "@/app/services/admin/rbacTypes";
 import { PageHeader, PageShell } from "@/components/ui/page";
 import { PERMISSION_CATALOG, PERMISSIONS } from "@/lib/rbac/permissions";
 
@@ -122,7 +125,6 @@ function TabButton({
 }
 
 // ─── Aba: Usuários ────────────────────────────────────────────────────────────
-
 function UsersPanel({
   users,
   roles,
@@ -144,16 +146,17 @@ function UsersPanel({
     setSavingUserId(userId);
     try {
       const result = await assignUserTopManagerLink(userId, cdUsr);
-      if (!result.success) {
-        toast(result.error);
+      if (!result.success || !result.user) {
+        toast(result.error ?? "Erro ao salvar vínculo.");
         return;
       }
-      onUserUpdated(result.user!);
+      onUserUpdated(result.user);
       toast("Vínculo TopManager atualizado.");
     } finally {
       setSavingUserId(null);
     }
   }
+
   async function handleAssign(userId: string, key: string) {
     const roleId = key === NO_ROLE_KEY ? null : key;
     setSavingUserId(userId);
@@ -203,7 +206,8 @@ function UsersPanel({
             <p className="truncate text-sm text-muted">{user.email}</p>
           </div>
 
-          <div className="shrink-0">
+          <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center">
+            {/* Papel */}
             <Select
               aria-label={`Papel de ${user.name ?? user.email ?? "usuário"}`}
               isDisabled={savingUserId === user.id}
@@ -243,6 +247,50 @@ function UsersPanel({
                 </ListBox>
               </Select.Popover>
             </Select>
+
+            {/* Vínculo TopManager */}
+            <Select
+              aria-label={`Vínculo TopManager de ${user.name ?? user.email ?? "usuário"
+                }`}
+              isDisabled={savingUserId === user.id}
+              onSelectionChange={(key) => {
+                if (key != null) void handleAssignVinculo(user.id, key.toString());
+              }}
+              selectedKey={
+                user.cdUsrTopManager != null
+                  ? String(user.cdUsrTopManager)
+                  : NO_LINK_KEY
+              }
+              variant="secondary"
+            >
+              <Label className="sr-only">Vínculo TopManager</Label>
+              <Select.Trigger className="min-w-52">
+                <Select.Value />
+                <Select.Indicator />
+              </Select.Trigger>
+              <Select.Popover>
+                <ListBox>
+                  <ListBox.Item
+                    id={NO_LINK_KEY}
+                    key={NO_LINK_KEY}
+                    textValue="Sem vínculo"
+                  >
+                    Sem vínculo
+                    <ListBox.ItemIndicator />
+                  </ListBox.Item>
+                  {topManagerUsers.map((u) => (
+                    <ListBox.Item
+                      id={String(u.cdUsr)}
+                      key={String(u.cdUsr)}
+                      textValue={u.nmUsr}
+                    >
+                      {u.nmUsr} (CdUsr {u.cdUsr})
+                      <ListBox.ItemIndicator />
+                    </ListBox.Item>
+                  ))}
+                </ListBox>
+              </Select.Popover>
+            </Select>
           </div>
         </div>
       ))}
@@ -251,7 +299,6 @@ function UsersPanel({
 }
 
 // ─── Aba: Papéis e permissões ─────────────────────────────────────────────────
-
 function RolesPanel({
   roles,
   onRoleCreated,
@@ -267,7 +314,6 @@ function RolesPanel({
   const [isCreating, setIsCreating] = useState(false);
   const [deletingRole, setDeletingRole] = useState<RoleSummary | null>(null);
   const deleteModalState = useOverlayState();
-
   const showForm = isCreating || editingRole !== null;
 
   function handleSaved(role: RoleSummary, isNew: boolean) {
@@ -444,23 +490,19 @@ function RoleEditor({
     }
     setIsSaving(true);
     setError(null);
-
     const input = {
       name,
       description: description.trim() || undefined,
       permissions: [...permissions],
     };
-
     try {
       const result = role
         ? await updateRole(role.id, input)
         : await createRole(input);
-
       if (!result.success) {
         setError(result.error);
         return;
       }
-
       onSaved(result.role, role === null);
       toast(role ? "Papel atualizado." : "Papel criado.");
     } finally {
@@ -544,7 +586,6 @@ function RoleEditor({
             </fieldset>
           ))}
         </div>
-
         {hasManage && (
           <p className="mt-3 rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-600 dark:text-amber-400">
             Atenção: este papel concede acesso total à administração (papéis,

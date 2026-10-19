@@ -378,9 +378,7 @@ export async function assignUserTopManagerLink(
   try {
     // 1. Autorização — só ADMIN altera vínculos
     const admin = await getUsuarioAtual();
-    if (!admin || admin.role !== "ADMIN") {
-      return { success: false, error: "Não autorizado." };
-    }
+    requirePermission(PERMISSIONS.RBAC_MANAGE)
 
     // 2. Validação do valor — inteiro positivo ou null (sem vínculo)
     if (

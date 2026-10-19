@@ -139,9 +139,19 @@ function UsersPanel({
   topManagerUsers: TopManagerUserSummary[];
 }) {
   const [savingUserId, setSavingUserId] = useState<string | null>(null);
+  const [buscaVinculo, setBuscaVinculo] = useState("");
   const NO_LINK_KEY = "sem-vinculo";
 
+  // Filtro por nome do usuário TopManager
+  const termoBusca = buscaVinculo.trim().toLowerCase();
+  const vinculosFiltrados = termoBusca
+    ? topManagerUsers.filter((u) =>
+      u.nmUsr.toLowerCase().includes(termoBusca),
+    )
+    : topManagerUsers;
+
   async function handleAssignVinculo(userId: string, key: string) {
+    setBuscaVinculo("");
     const cdUsr = key === NO_LINK_KEY ? null : Number(key);
     setSavingUserId(userId);
     try {
@@ -269,6 +279,15 @@ function UsersPanel({
                 <Select.Indicator />
               </Select.Trigger>
               <Select.Popover>
+                {/* Filtro por nome */}
+                <div className="border-b border-border p-2">
+                  <input
+                    value={buscaVinculo}
+                    onChange={(e) => setBuscaVinculo(e.target.value)}
+                    placeholder="Filtrar por nome..."
+                    className="w-full rounded-md border border-border bg-surface-secondary px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-primary/30"
+                  />
+                </div>
                 <ListBox>
                   <ListBox.Item
                     id={NO_LINK_KEY}
@@ -278,7 +297,7 @@ function UsersPanel({
                     Sem vínculo
                     <ListBox.ItemIndicator />
                   </ListBox.Item>
-                  {topManagerUsers.map((u) => (
+                  {vinculosFiltrados.map((u) => (
                     <ListBox.Item
                       id={String(u.cdUsr)}
                       key={String(u.cdUsr)}
@@ -288,6 +307,14 @@ function UsersPanel({
                       <ListBox.ItemIndicator />
                     </ListBox.Item>
                   ))}
+                  {vinculosFiltrados.length === 0 && (
+                    <ListBox.Item
+                      isDisabled
+                      textValue="Nenhum usuário encontrado"
+                    >
+                      Nenhum usuário encontrado para &ldquo;{buscaVinculo}&rdquo;
+                    </ListBox.Item>
+                  )}
                 </ListBox>
               </Select.Popover>
             </Select>
@@ -400,7 +427,8 @@ function RoleCard({
 }) {
   const permissionCount = role.isSystem
     ? "Todas as permissões"
-    : `${role.permissions.length} permiss${role.permissions.length === 1 ? "ão" : "ões"}`;
+    : `${role.permissions.length} permiss${role.permissions.length === 1 ? "ão" : "ões"
+    }`;
 
   return (
     <div className="kaju-panel flex flex-col gap-3 rounded-xl p-5">
@@ -659,7 +687,8 @@ function DeleteRoleModal({
                 </span>
                 ?{" "}
                 {role && role.userCount > 0
-                  ? `${role.userCount} usuário${role.userCount !== 1 ? "s" : ""} ficará${role.userCount !== 1 ? "ão" : ""} sem papel (acesso legado).`
+                  ? `${role.userCount} usuário${role.userCount !== 1 ? "s" : ""
+                  } ficará${role.userCount !== 1 ? "ão" : ""} sem papel (acesso legado).`
                   : "Nenhum usuário será afetado."}
               </p>
               {error && (

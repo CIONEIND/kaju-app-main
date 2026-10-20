@@ -376,9 +376,8 @@ export async function assignUserTopManagerLink(
   cdUsrTopManager: number | null,
 ): Promise<{ success: boolean; user?: UserSummary; error?: string }> {
   try {
-    // 1. Autorização — só ADMIN altera vínculos
-    const admin = await getUsuarioAtual();
-    requirePermission(PERMISSIONS.RBAC_MANAGE)
+    // 1. Autorização — mesmo padrão das outras funções do arquivo
+    await requirePermission(PERMISSIONS.RBAC_MANAGE);
 
     // 2. Validação do valor — inteiro positivo ou null (sem vínculo)
     if (
@@ -416,18 +415,7 @@ export async function assignUserTopManagerLink(
       },
     });
 
-    // 5. Mapear para UserSummary no MESMO formato que o assignUserRole retorna
-    //    (ADAPTAR: copie o mapeamento exato que o assignUserRole usa)
-    const userSummary: UserSummary = {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      blocked: user.blocked,
-      cdUsrTopManager: user.cdUsrTopManager,
-      role: user.role,
-    };
-
-    return { success: true, user: userSummary };
+    return { success: true, user };
   } catch (error) {
     console.error("[assignUserTopManagerLink]", error);
     return { success: false, error: "Erro ao salvar vínculo com o TopManager." };

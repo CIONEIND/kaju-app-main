@@ -2,6 +2,7 @@
 import { redirect } from "next/navigation";
 // import { getUsuarioAtual } from "@/lib/auth"; // ← ADAPTAR: aponte para a sessão existente do app
 import { ListaAnalises } from "@/components/producao/analises/ListaAnalises";
+import { listarAnalisesMock } from "@/lib/analises/mockStore";
 
 export const metadata = { title: "Produção | Kaju App" };
 
@@ -12,6 +13,8 @@ export default async function ProducaoPage() {
     //if (!usuario) redirect("/login");
     //if (usuario.role !== "ADMIN") redirect("/"); // Fase 2+: incluir SUPERVISOR_PRODUCAO e OPERADOR_PRODUCAO
 
+    // dentro da página:
+    const analises = listarAnalisesMock();
     return (
         <main className="space-y-6 p-6">
             <header>

@@ -1,61 +1,85 @@
-// src/app/(producao)/producao/components/CardAnalise.tsx
-"use client";
+import { Eye, Pencil } from "lucide-react";
+import Link from "next/link";
+import type { AnaliseF3PGI6 } from "@/lib/top-manager/repository/cione-f3pgi6/types";
 
-import type { Analise } from "@/app/(protected)/(producao)/producao/analises/types";
-
-interface Props {
-    analise: Analise;
-    podeEditar: boolean;
-    podeExcluir: boolean;
-    onExcluir: (id: string) => void;
+function formatarNumero(valor: number | null): string {
+    if (valor === null) return "—";
+    return valor.toLocaleString("pt-BR", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    });
 }
 
-export function CardAnalise({ analise, podeEditar, podeExcluir, onExcluir }: Props) {
-    const data = new Date(analise.dataHora);
-    const dataFmt = data.toLocaleDateString("pt-BR");
-    const horaFmt = data.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-
+export function CardAnalise({ analise }: { analise: AnaliseF3PGI6 }) {
     return (
-        <article className="rounded-xl border bg-white p-4 shadow-sm transition hover:shadow-md">
+        <article className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-5 shadow-sm transition-shadow hover:shadow-md">
             <div className="flex items-start justify-between gap-2">
-                <div>
-                    <h3 className="font-semibold text-gray-900">{analise.tipoNome}</h3>
-                    <p className="text-xs text-gray-500">
-                        Lote {analise.lote} · {analise.processo}
+                <div className="min-w-0">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-accent">
+                        F3PGI6 · #{analise.id}
                     </p>
+                    <h3 className="mt-0.5 truncate font-semibold text-foreground">
+                        {analise.tipoNome ?? "—"}
+                    </h3>
                 </div>
-                <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
-                    {analise.status}
-                </span>
             </div>
 
-            <p className="mt-2 text-sm text-gray-600">
-                {dataFmt} às {horaFmt} · {analise.operador}
-            </p>
+            <dl className="flex flex-col gap-1.5 text-sm">
+                <div className="flex justify-between gap-2">
+                    <dt className="text-muted">Lote</dt>
+                    <dd className="truncate font-medium text-foreground">
+                        {analise.loteNome ?? "—"}
+                    </dd>
+                </div>
+                <div className="flex justify-between gap-2">
+                    <dt className="text-muted">Data</dt>
+                    <dd className="font-medium text-foreground">
+                        {analise.data}
+                        {analise.hora ? ` · ${analise.hora}` : ""}
+                    </dd>
+                </div>
+                <div className="flex justify-between gap-2">
+                    <dt className="text-muted">Responsável</dt>
+                    <dd className="truncate font-medium text-foreground">
+                        {analise.responsavelNome ?? "—"}
+                    </dd>
+                </div>
+            </dl>
 
-            <div className="mt-3 flex items-center justify-between">
-                <a
-                    href={`/producao/analises/${analise.tipoCodigo}/${analise.id}`}
-                    className="text-sm text-blue-600 hover:underline"
+            <div className="grid grid-cols-2 gap-2">
+                <div className="rounded-lg bg-surface-secondary px-3 py-2">
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-muted">
+                        Média amêndoa
+                    </p>
+                    <p className="text-lg font-semibold text-foreground">
+                        {formatarNumero(analise.mediaAmendoa)}
+                    </p>
+                </div>
+                <div className="rounded-lg bg-surface-secondary px-3 py-2">
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-muted">
+                        Média casca
+                    </p>
+                    <p className="text-lg font-semibold text-foreground">
+                        {formatarNumero(analise.mediaCasca)}
+                    </p>
+                </div>
+            </div>
+
+            <div className="mt-auto flex items-center justify-end gap-1 border-t border-border pt-3">
+                <Link
+                    aria-label={`Visualizar análise ${analise.id}`}
+                    className="rounded-md p-1.5 text-muted hover:bg-surface-secondary hover:text-foreground"
+                    href={`/producao/analises/F3PGI6/${analise.id}`}
                 >
-                    Clique para mais detalhes
-                </a>
-
-                {(podeEditar || podeExcluir) && (
-                    <div className="flex gap-3">
-                        {podeEditar && (
-                            <button className="text-xs text-gray-500 hover:text-blue-600">Editar</button>
-                        )}
-                        {podeExcluir && (
-                            <button
-                                onClick={() => onExcluir(analise.id)}
-                                className="text-xs text-gray-500 hover:text-red-600"
-                            >
-                                Excluir
-                            </button>
-                        )}
-                    </div>
-                )}
+                    <Eye size={16} />
+                </Link>
+                <Link
+                    aria-label={`Editar análise ${analise.id}`}
+                    className="rounded-md p-1.5 text-muted hover:bg-surface-secondary hover:text-foreground"
+                    href={`/producao/analises/F3PGI6/${analise.id}/editar`}
+                >
+                    <Pencil size={16} />
+                </Link>
             </div>
         </article>
     );

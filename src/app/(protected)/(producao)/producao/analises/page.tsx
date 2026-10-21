@@ -1,21 +1,14 @@
-import { Pencil, Eye } from "lucide-react";
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getUsuarioAtual } from "@/lib/auth/auth";
-import { consultarAnalisesF3PGI6 } from "@/app/services/producao/analises/consultarAnalisesF3PGI6";
-import { NovaAnaliseModal } from "./NovaAnaliseModal";
 import { getCurrentUserAccess } from "@/lib/rbac/access";
 import { PERMISSIONS } from "@/lib/rbac/permissions";
+import { consultarAnalisesF3PGI6 } from "@/app/services/producao/analises/consultarAnalisesF3PGI6";
+import { FiltrosAnalises } from "@/components/producao/analises/FiltrosAnalises";
+import { ListaAnalises } from "@/components/producao/analises/ListaAnalises";
+import { Paginacao } from "@/components/producao/analises/Paginacao";
+import { NovaAnaliseModal } from "./NovaAnaliseModal";
 
-const POR_PAGINA = 20;
-
-function formatarNumero(valor: number | null): string {
-    if (valor === null) return "—";
-    return valor.toLocaleString("pt-BR", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-    });
-}
+const POR_PAGINA = 12; // 4 linhas × 3 colunas na grade
 
 function lerTexto(valor: string | string[] | undefined): string | undefined {
     return typeof valor === "string" && valor.trim() !== "" ? valor : undefined;
@@ -34,6 +27,7 @@ export default async function CentralAnalisesPage({
 }) {
     const usuario = await getUsuarioAtual();
     if (!usuario) redirect("/login");
+
     const access = await getCurrentUserAccess();
     if (!access?.permissions.has(PERMISSIONS.ANALISES_VIEW)) notFound();
 
@@ -82,192 +76,24 @@ export default async function CentralAnalisesPage({
                 <NovaAnaliseModal />
             </div>
 
-            {/* Filtros */}
-            <form
-                className="flex flex-wrap items-end gap-3 rounded-xl border border-border bg-surface p-4"
-                method="get"
-            >
-                <div>
-                    <label className="mb-1 block text-xs font-medium text-muted" htmlFor="dt">
-                        De
-                    </label>
-                    <input
-                        className="rounded-md border border-border bg-surface-secondary px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/30"
-                        defaultValue={dtInicial ?? ""}
-                        id="dt"
-                        name="dt"
-                        type="date"
-                    />
-                </div>
-                <div>
-                    <label className="mb-1 block text-xs font-medium text-muted" htmlFor="ate">
-                        Até
-                    </label>
-                    <input
-                        className="rounded-md border border-border bg-surface-secondary px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/30"
-                        defaultValue={dtFinal ?? ""}
-                        id="ate"
-                        name="ate"
-                        type="date"
-                    />
-                </div>
-                <div>
-                    <label className="mb-1 block text-xs font-medium text-muted" htmlFor="lote">
-                        Lote
-                    </label>
-                    <select
-                        className="min-w-44 rounded-md border border-border bg-surface-secondary px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/30"
-                        defaultValue={loteId ? String(loteId) : ""}
-                        id="lote"
-                        name="lote"
-                    >
-                        <option value="">Todos</option>
-                        {lotes.map((l) => (
-                            <option key={l.id} value={String(l.id)}>
-                                {l.nome}
-                            </option>
-                        ))}
-                    </select>
-                </div>
-                <div>
-                    <label className="mb-1 block text-xs font-medium text-muted" htmlFor="tipo">
-                        Tipo
-                    </label>
-                    <select
-                        className="min-w-44 rounded-md border border-border bg-surface-secondary px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/30"
-                        defaultValue={tipoId ? String(tipoId) : ""}
-                        id="tipo"
-                        name="tipo"
-                    >
-                        <option value="">Todos</option>
-                        {tipos.map((t) => (
-                            <option key={t.cdObj} value={String(t.cdObj)}>
-                                {t.nome}
-                            </option>
-                        ))}
-                    </select>
-                </div>
-                <button
-                    className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white hover:opacity-90"
-                    type="submit"
-                >
-                    Filtrar
-                </button>
-                <Link
-                    className="rounded-md border border-border px-4 py-2 text-sm font-medium text-muted hover:text-foreground"
-                    href="/producao/analises"
-                >
-                    Limpar
-                </Link>
-            </form>
+            <FiltrosAnalises
+                dtInicial={dtInicial}
+                dtFinal={dtFinal}
+                loteId={loteId}
+                tipoId={tipoId}
+                lotes={lotes}
+                tipos={tipos}
+            />
 
-            {/* Tabela */}
-            <div className="overflow-hidden rounded-xl border border-border">
-                <div className="overflow-x-auto">
-                    <table className="w-full min-w-[900px] text-left text-sm">
-                        <thead className="bg-surface-secondary text-xs uppercase tracking-wide text-muted">
-                            <tr>
-                                <th className="px-4 py-3 font-semibold">ID</th>
-                                <th className="px-4 py-3 font-semibold">Data / Hora</th>
-                                <th className="px-4 py-3 font-semibold">Lote</th>
-                                <th className="px-4 py-3 font-semibold">Tipo</th>
-                                <th className="px-4 py-3 font-semibold">Responsável</th>
-                                <th className="px-4 py-3 text-right font-semibold">Média amêndoa</th>
-                                <th className="px-4 py-3 text-right font-semibold">Média casca</th>
-                                <th className="px-4 py-3 text-center font-semibold">Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-border">
-                            {analises.length === 0 ? (
-                                <tr>
-                                    <td className="px-4 py-12 text-center text-muted" colSpan={8}>
-                                        Nenhuma análise encontrada para os filtros aplicados.
-                                    </td>
-                                </tr>
-                            ) : (
-                                analises.map((analise) => (
-                                    <tr className="hover:bg-surface-secondary/60" key={analise.id}>
-                                        <td className="px-4 py-3 font-medium text-foreground">
-                                            {analise.id}
-                                        </td>
-                                        <td className="px-4 py-3 text-muted">
-                                            {analise.data} {analise.hora && `· ${analise.hora}`}
-                                        </td>
-                                        <td className="px-4 py-3 text-foreground">
-                                            {analise.loteNome ?? "—"}
-                                        </td>
-                                        <td className="px-4 py-3 text-foreground">
-                                            {analise.tipoNome ?? "—"}
-                                        </td>
-                                        <td className="px-4 py-3 text-foreground">
-                                            {analise.responsavelNome ?? "—"}
-                                        </td>
-                                        <td className="px-4 py-3 text-right font-medium text-foreground">
-                                            {formatarNumero(analise.mediaAmendoa)}
-                                        </td>
-                                        <td className="px-4 py-3 text-right font-medium text-foreground">
-                                            {formatarNumero(analise.mediaCasca)}
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <div className="flex items-center justify-center gap-1">
-                                                <Link
-                                                    aria-label={`Visualizar análise ${analise.id}`}
-                                                    className="rounded-md p-1.5 text-muted hover:bg-surface-secondary hover:text-foreground"
-                                                    href={`/producao/analises/F3PGI6/${analise.id}`}
-                                                >
-                                                    <Eye size={16} />
-                                                </Link>
-                                                <Link
-                                                    aria-label={`Editar análise ${analise.id}`}
-                                                    className="rounded-md p-1.5 text-muted hover:bg-surface-secondary hover:text-foreground"
-                                                    href={`/producao/analises/F3PGI6/${analise.id}/editar`}
-                                                >
-                                                    <Pencil size={16} />
-                                                </Link>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+            <p className="text-sm text-muted">
+                {total === 0
+                    ? "Nenhum registro"
+                    : `${total} registro${total !== 1 ? "s" : ""} · página ${pagina} de ${totalPaginas}`}
+            </p>
 
-            {/* Paginação */}
-            <div className="flex flex-wrap items-center justify-between gap-3">
-                <p className="text-sm text-muted">
-                    {total === 0
-                        ? "Nenhum registro"
-                        : `${total} registro${total !== 1 ? "s" : ""} · página ${pagina} de ${totalPaginas}`}
-                </p>
-                <div className="flex items-center gap-2">
-                    {pagina > 1 ? (
-                        <Link
-                            className="rounded-md border border-border px-3 py-1.5 text-sm text-foreground hover:bg-surface-secondary"
-                            href={urlComPagina(pagina - 1)}
-                        >
-                            Anterior
-                        </Link>
-                    ) : (
-                        <span className="rounded-md border border-border px-3 py-1.5 text-sm text-muted opacity-50">
-                            Anterior
-                        </span>
-                    )}
-                    {pagina < totalPaginas ? (
-                        <Link
-                            className="rounded-md border border-border px-3 py-1.5 text-sm text-foreground hover:bg-surface-secondary"
-                            href={urlComPagina(pagina + 1)}
-                        >
-                            Próxima
-                        </Link>
-                    ) : (
-                        <span className="rounded-md border border-border px-3 py-1.5 text-sm text-muted opacity-50">
-                            Próxima
-                        </span>
-                    )}
-                </div>
-            </div>
+            <ListaAnalises analises={analises} />
+
+            <Paginacao pagina={pagina} totalPaginas={totalPaginas} urlComPagina={urlComPagina} />
         </main>
     );
 }

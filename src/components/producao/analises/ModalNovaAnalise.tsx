@@ -2,7 +2,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { TIPOS_FORMULARIO } from "@/mocks/mock-analises";
+import { FORMULARIOS } from "@/lib/analises/formularios";
 
 interface Props {
     aberto: boolean;
@@ -25,14 +25,14 @@ export function ModalNovaAnalise({ aberto, onFechar }: Props) {
                 </p>
 
                 <ul className="mt-4 space-y-2">
-                    {TIPOS_FORMULARIO.map((t) => (
-                        <li key={t.codigo}>
+                    {Object.values(FORMULARIOS).map((t) => (
+                        <li key={t.titulo}>
                             <button
-                                onClick={() => router.push(`/producao/analises/${t.codigo}/novo`)}
+                                onClick={() => router.push(`/producao/analises/${t.titulo}/novo`)}
                                 className="w-full rounded-lg border px-4 py-3 text-left text-sm font-medium hover:border-blue-500 hover:bg-blue-50"
                             >
-                                {t.nome}
-                                <span className="ml-2 text-xs text-gray-400">{t.processo}</span>
+                                {t.descricao}
+                                <span className="ml-2 text-xs text-gray-400">{t.descricao}</span>
                             </button>
                         </li>
                     ))}

@@ -1,132 +1,107 @@
-// src/app/(producao)/producao/components/FiltrosAnalises.tsx
-"use client";
+import Link from "next/link";
+import type {
+    LoteSemanalOpcao,
+    TipoObjetoOpcao,
+} from "@/lib/top-manager/repository/cione-f3pgi6/types";
 
-
-// src/app/(producao)/producao/components/FiltrosAnalises.tsx
-"use client";
-
-import { useState } from "react";
-import { TIPOS_FORMULARIO } from "@/mocks/mock-analises";
-import type { Processo } from "@/app/(protected)/(producao)/producao/analises/types";
-
-interface Props {
-    processo: "TODOS" | Processo;
-    onProcesso: (p: "TODOS" | Processo) => void;
-    tipo: string; // "" = todos
-    onTipo: (t: string) => void;
-    dataInicio: string; // "YYYY-MM-DD" ou ""
-    onDataInicio: (d: string) => void;
-    dataFim: string;
-    onDataFim: (d: string) => void;
-    busca: string;
-    onBusca: (b: string) => void;
-    onLimpar: () => void;
+export interface FiltrosAnalisesProps {
+    dtInicial?: string;
+    dtFinal?: string;
+    loteId?: number;
+    tipoId?: number;
+    lotes: LoteSemanalOpcao[];
+    tipos: TipoObjetoOpcao[];
 }
 
-const OPCOES_PROCESSO = [
-    { valor: "TODOS", rotulo: "Todos" },
-    { valor: "CAST", rotulo: "Proc. Cast" },
-    { valor: "AMEND", rotulo: "Proc. Amend" },
-] as const;
-
 export function FiltrosAnalises({
-    processo, onProcesso, tipo, onTipo,
-    dataInicio, onDataInicio, dataFim, onDataFim,
-    busca, onBusca, onLimpar,
-}: Props) {
-    const [aberto, setAberto] = useState(false);
-
-    // Conta filtros avançados ativos — mostra o badge no botão do mobile
-    const ativos = [tipo, dataInicio, dataFim].filter(Boolean).length;
-
+    dtInicial,
+    dtFinal,
+    loteId,
+    tipoId,
+    lotes,
+    tipos,
+}: FiltrosAnalisesProps) {
     return (
-        <div className="w-full space-y-3">
-            {/* Linha principal: processo + busca + toggle de filtros (mobile) */}
-            <div className="flex flex-wrap items-center gap-3">
-                <div className="flex overflow-hidden rounded-lg border">
-                    {OPCOES_PROCESSO.map((o) => (
-                        <button
-                            key={o.valor}
-                            onClick={() => onProcesso(o.valor)}
-                            className={`px-3 py-1.5 text-sm ${processo === o.valor
-                                ? "bg-blue-600 text-white"
-                                : "bg-white text-gray-600 hover:bg-gray-50"
-                                }`}
-                        >
-                            {o.rotulo}
-                        </button>
-                    ))}
-                </div>
-
+        <form
+            className="flex flex-wrap items-end gap-3 rounded-xl border border-border bg-surface p-4"
+            method="get"
+        >
+            <div>
+                <label className="mb-1 block text-xs font-medium text-muted" htmlFor="dt">
+                    De
+                </label>
                 <input
-                    type="search"
-                    value={busca}
-                    onChange={(e) => onBusca(e.target.value)}
-                    placeholder="Buscar por título ou lote..."
-                    className="min-w-0 flex-1 rounded-lg border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 sm:max-w-xs"
+                    className="rounded-md border border-border bg-surface-secondary px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/30"
+                    defaultValue={dtInicial ?? ""}
+                    id="dt"
+                    name="dt"
+                    type="date"
                 />
+            </div>
 
-                {/* Toggle visível só no mobile */}
-                <button
-                    onClick={() => setAberto((a) => !a)}
-                    className="relative rounded-lg border px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 md:hidden"
+            <div>
+                <label className="mb-1 block text-xs font-medium text-muted" htmlFor="ate">
+                    Até
+                </label>
+                <input
+                    className="rounded-md border border-border bg-surface-secondary px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/30"
+                    defaultValue={dtFinal ?? ""}
+                    id="ate"
+                    name="ate"
+                    type="date"
+                />
+            </div>
+
+            <div>
+                <label className="mb-1 block text-xs font-medium text-muted" htmlFor="lote">
+                    Lote
+                </label>
+                <select
+                    className="min-w-44 rounded-md border border-border bg-surface-secondary px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/30"
+                    defaultValue={loteId ? String(loteId) : ""}
+                    id="lote"
+                    name="lote"
                 >
-                    Filtros
-                    {ativos > 0 && (
-                        <span className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-xs text-white">
-                            {ativos}
-                        </span>
-                    )}
-                </button>
+                    <option value="">Todos</option>
+                    {lotes.map((l) => (
+                        <option key={l.id} value={String(l.id)}>
+                            {l.nome}
+                        </option>
+                    ))}
+                </select>
             </div>
 
-            {/* Filtros avançados: sempre visíveis no desktop, recolhíveis no mobile */}
-            <div className={`${aberto ? "flex" : "hidden"} flex-wrap items-end gap-3 rounded-lg border bg-gray-50 p-3 md:flex`}>
-                <div>
-                    <label className="mb-1 block text-xs font-medium text-gray-500">De</label>
-                    <input
-                        type="date"
-                        value={dataInicio}
-                        onChange={(e) => onDataInicio(e.target.value)}
-                        className="rounded-lg border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                </div>
-
-                <div>
-                    <label className="mb-1 block text-xs font-medium text-gray-500">Até</label>
-                    <input
-                        type="date"
-                        value={dataFim}
-                        onChange={(e) => onDataFim(e.target.value)}
-                        className="rounded-lg border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                </div>
-
-                <div>
-                    <label className="mb-1 block text-xs font-medium text-gray-500">Tipo de formulário</label>
-                    <select
-                        value={tipo}
-                        onChange={(e) => onTipo(e.target.value)}
-                        className="rounded-lg border bg-white px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                        <option value="">Todos os tipos</option>
-                        {TIPOS_FORMULARIO.map((t) => (
-                            <option key={t.codigo} value={t.codigo}>
-                                {t.nome}
-                            </option>
-                        ))}
-                    </select>
-                </div>
-
-                {ativos > 0 && (
-                    <button
-                        onClick={onLimpar}
-                        className="rounded-lg px-3 py-1.5 text-sm text-blue-600 hover:underline"
-                    >
-                        Limpar filtros
-                    </button>
-                )}
+            <div>
+                <label className="mb-1 block text-xs font-medium text-muted" htmlFor="tipo">
+                    Tipo
+                </label>
+                <select
+                    className="min-w-44 rounded-md border border-border bg-surface-secondary px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/30"
+                    defaultValue={tipoId ? String(tipoId) : ""}
+                    id="tipo"
+                    name="tipo"
+                >
+                    <option value="">Todos</option>
+                    {tipos.map((t) => (
+                        <option key={t.cdObj} value={String(t.cdObj)}>
+                            {t.nome}
+                        </option>
+                    ))}
+                </select>
             </div>
-        </div>
+
+            <button
+                className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white hover:opacity-90"
+                type="submit"
+            >
+                Filtrar
+            </button>
+            <Link
+                className="rounded-md border border-border px-4 py-2 text-sm font-medium text-muted hover:text-foreground"
+                href="/producao/analises"
+            >
+                Limpar
+            </Link>
+        </form>
     );
 }

@@ -17,3 +17,4 @@ export interface TipoFormulario {
   nome: string;
   processo: Processo;
 }
+

@@ -13,11 +13,12 @@ import {
   ShieldCheck,
   ShoppingCart,
   Users,
+  X,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { PERMISSIONS } from "@/lib/rbac/permissions";
 
 type SubItem = {
@@ -117,14 +118,17 @@ export default function Sidebar({
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({});
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
 
-  // React Compiler cuida da memoização — sem useMemo manual.
+  // Fecha o menu mobile automaticamente ao navegar de página
+  useEffect(() => {
+    setIsMobileOpen(false);
+  }, [pathname]);
+
   const granted = new Set(permissions);
   const isGranted = (permission?: string) =>
     !permission || granted.has(permission);
 
-  // Grupo sem permissão some inteiro; sem sub-item visível, também some — não
-  // adianta mostrar um menu cujos destinos todos dão 404.
   const visibleItems = menuItems
     .filter((item) => isGranted(item.requiresPermission))
     .map((item) => ({
@@ -153,17 +157,17 @@ export default function Sidebar({
     if (isCollapsed) setIsCollapsed(false);
   };
 
-  return (
+  // Conteúdo isolado do menu para reuso tanto no mobile quanto desktop
+  const sidebarContent = (collapsedState: boolean) => (
     <aside
-      className={`flex h-screen shrink-0 flex-col border-r border-white/[0.06] bg-[#0f1621] text-white transition-all duration-300 ease-in-out ${isCollapsed ? "w-[76px]" : "w-[264px]"
-        }`}
+      className={`flex h-full w-full flex-col border-r border-white/[0.06] bg-[#0f1621] text-white transition-all duration-300 ease-in-out`}
     >
       <div className="flex h-16 items-center gap-3 border-b border-white/[0.07] px-4">
         <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent text-sm font-black tracking-tight text-white shadow-lg shadow-accent/30">
           K
         </div>
-        {!isCollapsed && (
-          <div className="min-w-0">
+        {!collapsedState && (
+          <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold leading-5 tracking-tight">
               Kaju
             </p>
@@ -175,9 +179,11 @@ export default function Sidebar({
             )}
           </div>
         )}
+
+        {/* Botão de recolher visível apenas no Desktop */}
         <Button
-          aria-label={isCollapsed ? "Expandir menu" : "Recolher menu"}
-          className={`ml-auto text-slate-500 hover:bg-white/[0.07] hover:text-slate-300 ${isCollapsed ? "mx-auto" : ""
+          aria-label={collapsedState ? "Expandir menu" : "Recolher menu"}
+          className={`hidden lg:flex text-slate-500 hover:bg-white/[0.07] hover:text-slate-300 ${collapsedState ? "mx-auto" : "ml-auto"
             }`}
           isIconOnly
           onPress={() => setIsCollapsed(!isCollapsed)}
@@ -197,7 +203,7 @@ export default function Sidebar({
 
             return (
               <div className="flex flex-col gap-1" key={item.name}>
-                {isCollapsed ? (
+                {collapsedState ? (
                   <Tooltip>
                     <Tooltip.Trigger>
                       <Button
@@ -237,7 +243,7 @@ export default function Sidebar({
                   </Button>
                 )}
 
-                {!isCollapsed && isOpen && (
+                {!collapsedState && isOpen && (
                   <div className="ml-3 flex flex-col gap-0.5 border-l border-white/[0.07] pl-3">
                     {item.subItems.map((subItem) => {
                       const isActive = isActivePath(pathname, subItem.href);
@@ -264,7 +270,7 @@ export default function Sidebar({
       </ScrollShadow>
 
       <div className="border-t border-white/[0.07] p-2">
-        {isCollapsed ? (
+        {collapsedState ? (
           <Tooltip>
             <Tooltip.Trigger>
               <Button
@@ -296,5 +302,43 @@ export default function Sidebar({
         )}
       </div>
     </aside>
+  );
+
+  return (
+    <>
+      {/* Botão Hambúrguer — Mobile */}
+      <Button
+        aria-label="Abrir menu"
+        className="fixed top-3 left-3 z-50 bg-[#0f1621] text-white shadow-lg border border-white/10 lg:hidden"
+        isIconOnly
+        onPress={() => setIsMobileOpen((prev) => !prev)}
+      >
+        {isMobileOpen ? <X size={20} /> : <Menu size={20} />}
+      </Button>
+
+      {/* Overlay Escuro para Mobile */}
+      {isMobileOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden transition-opacity"
+          onClick={() => setIsMobileOpen(false)}
+        />
+      )}
+
+      {/* Sidebar — Mobile (Drawer Deslizante) */}
+      <div
+        className={`fixed top-0 left-0 z-40 h-screen w-[264px] transition-transform duration-300 ease-in-out lg:hidden ${isMobileOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
+      >
+        {sidebarContent(false)}
+      </div>
+
+      {/* Sidebar — Desktop (Layout Normal Fixo/Sticky) */}
+      <div
+        className={`hidden lg:block h-screen shrink-0 sticky top-0 transition-all duration-300 ease-in-out ${isCollapsed ? "w-[76px]" : "w-[264px]"
+          }`}
+      >
+        {sidebarContent(isCollapsed)}
+      </div>
+    </>
   );
 }

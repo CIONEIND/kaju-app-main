@@ -5,6 +5,7 @@ import {
   Box,
   ChevronDown,
   ChevronRight,
+  FlaskConical,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -77,12 +78,12 @@ const menuItems: MenuItem[] = [
   },
   {
     name: "Produção",
-    icon: Settings,
+    icon: FlaskConical,
     subItems: [
       {
         name: "Central de Análises",
-        href: "/producao/",
-        requiresPermission: PERMISSIONS.EMAIL_LABELS_MANAGE,
+        href: "/producao/analises",
+        requiresPermission: PERMISSIONS.ANALISES_VIEW,
       },
     ],
   },

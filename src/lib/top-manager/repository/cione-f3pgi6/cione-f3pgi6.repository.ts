@@ -58,9 +58,9 @@ export default class CioneF3PGI6Repository {
     return tsx
       .withSchema(SCHEMA)
       .from(`${TABELA} as C`)
-      .leftJoin("dbo.TbObj as ObjTp", "ObjTp.CdObj", "C.Tipo")
-      .leftJoin("dbo.TbUsr as UsrResp", "UsrResp.CdUsr", "C.Responsavel")
-      .leftJoin("dbo.CIONE_LotesSemanais as LS", "LS.Id", "C.Lote")
+      .leftJoin("TbObj as ObjTp", "ObjTp.CdObj", "C.Tipo")
+      .leftJoin("TbUsr as UsrResp", "UsrResp.CdUsr", "C.Responsavel")
+      .leftJoin("CIONE_LotesSemanais as LS", "LS.Id", "C.Lote")
       .select(
         "C.ID",
         tsx.raw("CONVERT(varchar(10), C.DATAHORA, 120) as Data"),

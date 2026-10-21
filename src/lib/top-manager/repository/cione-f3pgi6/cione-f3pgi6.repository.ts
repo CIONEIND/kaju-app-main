@@ -173,6 +173,7 @@ export default class CioneF3PGI6Repository {
       .withSchema(SCHEMA)
       .table("TbObj")
       .select("CdObj as cdObj", "NmObj as nome")
+      .andWhere("TpObj", "in", [52913, 52914, 52916, 52917, 53089, 53093, 53097, 52917])
       .orderBy("NmObj", "asc");
 
     return rows.map((r: { cdObj: number; nome: string | null }) => ({

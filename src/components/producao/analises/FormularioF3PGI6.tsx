@@ -8,30 +8,142 @@ import {
 } from "@/app/services/producao/analises/salvarAnaliseF3PGI6";
 import { Combobox } from "@/components/producao/ui/Combobox";
 
+/** Forma como a análise chega do banco (modo editar) */
+export interface AnaliseF3PGI6Inicial {
+    id: number;
+    data: string; // "YYYY-MM-DD"
+    hora: string; // "HH:mm"
+    loteId: number | null;
+    tipoId: number | null;
+    t1Amendoa: number | null;
+    t2Amendoa: number | null;
+    t3Amendoa: number | null;
+    t1Casca: number | null;
+    t2Casca: number | null;
+    t3Casca: number | null;
+}
+
 export interface FormularioF3PGI6Props {
     modo?: "novo" | "editar";
-    dadosIniciais?: {
-        id: string;
-        lote: string;
-        tipoAnalise: string;
-        dataAnalise: string;
-        horaAnalise: string | null;
-        resultado: "aprovado" | "reprovado" | "pendente";
-        observacoes: string | null;
-    };
+    dadosIniciais?: AnaliseF3PGI6Inicial;
     usuario: { nome: string; cdUsrTopManager: number | null };
     lotes: { valor: string; rotulo: string }[];
     tipos: { valor: string; rotulo: string }[];
 }
 
-type Status = "aprovado" | "reprovado" | "pendente";
+interface Medicoes {
+    t1Amendoa: string;
+    t2Amendoa: string;
+    t3Amendoa: string;
+    t1Casca: string;
+    t2Casca: string;
+    t3Casca: string;
+}
 
-function hojeISO() {
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+function hoje(): string {
     const d = new Date();
     const pad = (n: number) => String(n).padStart(2, "0");
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
+function agoraHora(): string {
+    const d = new Date();
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function textoDe(valor: number | null | undefined): string {
+    return valor === null || valor === undefined ? "" : String(valor);
+}
+
+/** Aceita "12,5" e "12.5"; devolve null se vazio ou inválido */
+function paraNumero(texto: string): number | null {
+    const limpo = texto.trim().replace(",", ".");
+    if (limpo === "") return null;
+    const n = Number(limpo);
+    return Number.isFinite(n) ? n : null;
+}
+
+/** Média das 3 medições, 2 casas; "—" se alguma estiver vazia */
+function media(a: string, b: string, c: string): string {
+    const nums = [paraNumero(a), paraNumero(b), paraNumero(c)];
+    if (nums.some((n) => n === null)) return "—";
+    const soma = (nums[0] as number) + (nums[1] as number) + (nums[2] as number);
+    return (soma / 3).toFixed(2);
+}
+
+// ─── Subcomponentes ──────────────────────────────────────────────────────────
+function CampoMedicao({
+    label,
+    valor,
+    onChange,
+}: {
+    label: string;
+    valor: string;
+    onChange: (v: string) => void;
+}) {
+    return (
+        <div>
+            <label className="mb-1 block text-xs font-medium text-gray-600">
+                {label}
+            </label>
+            <input
+                type="text"
+                inputMode="decimal"
+                value={valor}
+                onChange={(e) => onChange(e.target.value)}
+                placeholder="0,00"
+                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-blue-500"
+            />
+        </div>
+    );
+}
+
+function GrupoMedicoes({
+    titulo,
+    valores,
+    onChange,
+    mediaTexto,
+}: {
+    titulo: string;
+    valores: [string, string, string];
+    onChange: (indice: 0 | 1 | 2, valor: string) => void;
+    mediaTexto: string;
+}) {
+    return (
+        <fieldset className="rounded-lg border border-gray-200 p-4">
+            <legend className="px-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                {titulo}
+            </legend>
+            <div className="grid grid-cols-3 gap-3">
+                <CampoMedicao
+                    label="Teste 1"
+                    valor={valores[0]}
+                    onChange={(v) => onChange(0, v)}
+                />
+                <CampoMedicao
+                    label="Teste 2"
+                    valor={valores[1]}
+                    onChange={(v) => onChange(1, v)}
+                />
+                <CampoMedicao
+                    label="Teste 3"
+                    valor={valores[2]}
+                    onChange={(v) => onChange(2, v)}
+                />
+            </div>
+            <div className="mt-3 flex items-center justify-between rounded-md bg-gray-50 px-3 py-2">
+                <span className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                    Média
+                </span>
+                <span className="text-sm font-semibold text-gray-900">{mediaTexto}</span>
+            </div>
+        </fieldset>
+    );
+}
+
+// ─── Componente principal ────────────────────────────────────────────────────
 export function FormularioF3PGI6({
     modo = "novo",
     dadosIniciais,
@@ -42,21 +154,32 @@ export function FormularioF3PGI6({
     const router = useRouter();
     const editando = modo === "editar" && dadosIniciais !== undefined;
 
-    const [lote, setLote] = useState(dadosIniciais?.lote ?? "");
-    const [tipo, setTipo] = useState(dadosIniciais?.tipoAnalise ?? "");
-    const [data, setData] = useState(dadosIniciais?.dataAnalise ?? hojeISO());
-    const [hora, setHora] = useState(dadosIniciais?.horaAnalise ?? "");
-    const [status, setStatus] = useState<Status>(
-        dadosIniciais?.resultado ?? "aprovado",
+    const [lote, setLote] = useState(
+        dadosIniciais?.loteId != null ? String(dadosIniciais.loteId) : "",
     );
-    const [observacoes, setObservacoes] = useState(
-        dadosIniciais?.observacoes ?? "",
+    const [tipo, setTipo] = useState(
+        dadosIniciais?.tipoId != null ? String(dadosIniciais.tipoId) : "",
     );
+    const [data, setData] = useState(dadosIniciais?.data ?? hoje());
+    const [hora, setHora] = useState(dadosIniciais?.hora ?? agoraHora());
+
+    const [medicoes, setMedicoes] = useState<Medicoes>({
+        t1Amendoa: textoDe(dadosIniciais?.t1Amendoa),
+        t2Amendoa: textoDe(dadosIniciais?.t2Amendoa),
+        t3Amendoa: textoDe(dadosIniciais?.t3Amendoa),
+        t1Casca: textoDe(dadosIniciais?.t1Casca),
+        t2Casca: textoDe(dadosIniciais?.t2Casca),
+        t3Casca: textoDe(dadosIniciais?.t3Casca),
+    });
 
     const [enviando, setEnviando] = useState(false);
     const [erro, setErro] = useState<string | null>(null);
 
     const semVinculo = usuario.cdUsrTopManager === null;
+
+    function alterarMedicao(campo: keyof Medicoes, valor: string) {
+        setMedicoes((prev) => ({ ...prev, [campo]: valor }));
+    }
 
     async function handleSubmit(e: FormEvent<HTMLFormElement>) {
         e.preventDefault();
@@ -65,37 +188,58 @@ export function FormularioF3PGI6({
         if (!lote) return setErro("Selecione o lote.");
         if (!tipo) return setErro("Selecione o tipo de análise.");
         if (!data) return setErro("Informe a data da análise.");
-        if (semVinculo)
+        if (semVinculo) {
             return setErro(
                 "Usuário sem vínculo com o TopManager — contate o administrador.",
             );
+        }
+
+        const medidos = Object.values(medicoes).filter((v) => v.trim() !== "");
+        if (medidos.length === 0) {
+            return setErro("Informe ao menos uma medição (amêndoa ou casca).");
+        }
 
         setEnviando(true);
         try {
             const input: SalvarAnaliseF3PGI6Input = {
                 id: editando ? dadosIniciais.id : undefined,
-                lote,
-                tipoAnalise: tipo,
-                dataAnalise: data,
-                horaAnalise: hora || undefined,
-                resultado: status,
-                observacoes: observacoes.trim() || undefined,
+                data,
+                hora: hora || undefined,
+                loteId: Number(lote),
+                tipoId: Number(tipo),
+                t1Amendoa: paraNumero(medicoes.t1Amendoa),
+                t2Amendoa: paraNumero(medicoes.t2Amendoa),
+                t3Amendoa: paraNumero(medicoes.t3Amendoa),
+                t1Casca: paraNumero(medicoes.t1Casca),
+                t2Casca: paraNumero(medicoes.t2Casca),
+                t3Casca: paraNumero(medicoes.t3Casca),
             };
+
             const resultado = await salvarAnaliseF3PGI6(input);
             if (!resultado.ok) {
                 setErro(resultado.erro);
                 return;
             }
+
             router.push(`/producao/analises/F3PGI6/${resultado.id}`);
         } finally {
             setEnviando(false);
         }
     }
 
-    function handleLimpiar() {
+    function handleLimpar() {
         setLote("");
         setTipo("");
-        setObservacoes("");
+        setData(hoje());
+        setHora(agoraHora());
+        setMedicoes({
+            t1Amendoa: "",
+            t2Amendoa: "",
+            t3Amendoa: "",
+            t1Casca: "",
+            t2Casca: "",
+            t3Casca: "",
+        });
         setErro(null);
     }
 
@@ -172,7 +316,7 @@ export function FormularioF3PGI6({
 
                     <div>
                         <label className="mb-1.5 block text-sm font-medium text-gray-700">
-                            Hora <span className="text-gray-400">(opcional)</span>
+                            Hora
                         </label>
                         <input
                             type="time"
@@ -183,41 +327,41 @@ export function FormularioF3PGI6({
                     </div>
                 </div>
 
-                <div>
-                    <label className="mb-1.5 block text-sm font-medium text-gray-700">
-                        Resultado *
-                    </label>
-                    <div className="flex flex-wrap gap-2">
-                        {(["aprovado", "reprovado", "pendente"] as const).map((opcao) => (
-                            <button
-                                key={opcao}
-                                type="button"
-                                onClick={() => setStatus(opcao)}
-                                className={`rounded-lg border px-3 py-1.5 text-sm capitalize transition-colors ${status === opcao
-                                    ? opcao === "aprovado"
-                                        ? "border-green-500 bg-green-50 text-green-700"
-                                        : opcao === "reprovado"
-                                            ? "border-red-500 bg-red-50 text-red-700"
-                                            : "border-amber-500 bg-amber-50 text-amber-700"
-                                    : "border-gray-300 bg-white text-gray-600 hover:bg-gray-50"
-                                    }`}
-                            >
-                                {opcao}
-                            </button>
-                        ))}
-                    </div>
-                </div>
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                    <GrupoMedicoes
+                        titulo="Amêndoa"
+                        valores={[
+                            medicoes.t1Amendoa,
+                            medicoes.t2Amendoa,
+                            medicoes.t3Amendoa,
+                        ]}
+                        onChange={(i, v) =>
+                            alterarMedicao(
+                                (["t1Amendoa", "t2Amendoa", "t3Amendoa"] as const)[i],
+                                v,
+                            )
+                        }
+                        mediaTexto={media(
+                            medicoes.t1Amendoa,
+                            medicoes.t2Amendoa,
+                            medicoes.t3Amendoa,
+                        )}
+                    />
 
-                <div>
-                    <label className="mb-1.5 block text-sm font-medium text-gray-700">
-                        Observações <span className="text-gray-400">(opcional)</span>
-                    </label>
-                    <textarea
-                        value={observacoes}
-                        onChange={(e) => setObservacoes(e.target.value)}
-                        rows={4}
-                        placeholder="Laudo, parâmetros medidos, não conformidades..."
-                        className="w-full resize-y rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-blue-500"
+                    <GrupoMedicoes
+                        titulo="Casca"
+                        valores={[medicoes.t1Casca, medicoes.t2Casca, medicoes.t3Casca]}
+                        onChange={(i, v) =>
+                            alterarMedicao(
+                                (["t1Casca", "t2Casca", "t3Casca"] as const)[i],
+                                v,
+                            )
+                        }
+                        mediaTexto={media(
+                            medicoes.t1Casca,
+                            medicoes.t2Casca,
+                            medicoes.t3Casca,
+                        )}
                     />
                 </div>
 
@@ -228,7 +372,7 @@ export function FormularioF3PGI6({
                             if (editando) {
                                 router.push(`/producao/analises/F3PGI6/${dadosIniciais.id}`);
                             } else {
-                                handleLimpiar();
+                                handleLimpar();
                             }
                         }}
                         className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"

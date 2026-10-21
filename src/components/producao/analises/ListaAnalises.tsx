@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { ANALISES_MOCK } from "@/mocks/mock-analises";
-import type { Analise, Processo } from "@/app/(protected)/(producao)/producao/types";
+import type { Analise, Processo } from "@/app/(protected)/(producao)/producao/analises/types";
 import { CardAnalise } from "./CardAnalise";
 import { FiltrosAnalises } from "./FiltrosAnalises";
 import { ModalNovaAnalise } from "./ModalNovaAnalise";

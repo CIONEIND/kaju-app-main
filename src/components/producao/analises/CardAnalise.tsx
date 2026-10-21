@@ -1,7 +1,7 @@
 // src/app/(producao)/producao/components/CardAnalise.tsx
 "use client";
 
-import type { Analise } from "@/app/(protected)/(producao)/producao/types";
+import type { Analise } from "@/app/(protected)/(producao)/producao/analises/types";
 
 interface Props {
     analise: Analise;

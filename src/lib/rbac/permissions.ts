@@ -23,8 +23,8 @@ export const PERMISSIONS = {
   // Configurações
   EMAIL_LABELS_MANAGE: "emailLabels:manage",
   // Produção
-  PRODUCTION_VIEW: "production:view",
-  PRODUCTION_SAVE: "production:save",
+  ANALISES_VIEW: "analises:view",     // novo
+  ANALISES_MANAGE: "analises:manage", // novo
   // Administração
   RBAC_MANAGE: "rbac:manage",
 } as const;
@@ -109,17 +109,17 @@ export const PERMISSION_CATALOG: PermissionCategory[] = [
     ],
   },
   {
-    category: "Produção",
+    category: "Análises de produção",
     permissions: [
       {
-        key: PERMISSIONS.PRODUCTION_VIEW,
-        label: "Visualizar produção",
-        description: "Acessar informações sobre o processo de produção.",
+        key: PERMISSIONS.ANALISES_VIEW,
+        label: "Visualizar análises",
+        description: "Acessa a central e os detalhes das análises registradas.",
       },
       {
-        key: PERMISSIONS.PRODUCTION_SAVE,
-        label: "Cadastrar e editar produção",
-        description: "Criar e alterar registros de produção.",
+        key: PERMISSIONS.ANALISES_MANAGE,
+        label: "Gerenciar análises",
+        description: "Criar, editar e excluir análises de produção.",
       },
     ],
   },

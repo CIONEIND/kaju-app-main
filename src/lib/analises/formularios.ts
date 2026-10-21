@@ -5,6 +5,9 @@ import { consultarCentralF3PGI6, carregarF3PGI6 } from "@/app/services/producao/
 import { consultarCentralF6PGI6, carregarF6PGI6 } from "@/app/services/producao/analises/consultarCentralF6PGI6";
 import { listarOpcoesF3PGI6 } from "@/app/services/producao/analises/listarOpcoesF3PGI6";
 import { listarOpcoesF6PGI6 } from "@/app/services/producao/analises/listarOpcoesF6PGI6";
+import { FormularioLCC } from "@/components/producao/analises/FormularioLCC";
+import { consultarCentralLCC, carregarLCC } from "@/app/services/producao/analises/consultarCentralLCC";
+import { listarOpcoesLCC } from "@/app/services/producao/analises/listarOpcoesLCC";
 import type {
   DetalheAnalise,
   FiltroCentral,
@@ -43,6 +46,15 @@ export const FORMULARIOS: Record<string, FormularioRegistro> = {
     listarOpcoes: listarOpcoesF6PGI6,
     carregar: carregarF6PGI6,
   },
+  LCC: {
+  componente: FormularioLCC,
+  titulo: "LCC",
+  descricao: "Resultado LCC diário — viscosidade, altura e temperatura",
+  filtros: { periodo: true, lote: true, origem: true },
+  consultar: consultarCentralLCC,
+  listarOpcoes: listarOpcoesLCC,
+  carregar: carregarLCC,
+},
 };
 
 export type TipoFormulario = keyof typeof FORMULARIOS;

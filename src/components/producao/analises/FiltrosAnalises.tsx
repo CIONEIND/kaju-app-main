@@ -7,9 +7,11 @@ export interface FiltrosAnalisesProps {
     loteId?: number;
     tipoId?: number;
     siloId?: number;
+    origemId?: number;
     lotes: OpcaoCombo[];
     tipos: OpcaoCombo[];
     silos?: OpcaoCombo[];
+    origens?: OpcaoCombo[];
     disponiveis: FiltrosDisponiveis;
     limparHref: string;
 }
@@ -59,6 +61,28 @@ export function FiltrosAnalises(p: FiltrosAnalisesProps) {
                     </select>
                 </div>
             )}
+
+            {p.disponiveis.origem && (
+                <div>
+                    <label className="mb-1 block text-xs font-medium text-muted" htmlFor="origem">
+                        Origem
+                    </label>
+                    <select
+                        className={campo}
+                        defaultValue={p.origemId ? String(p.origemId) : ""}
+                        id="origem"
+                        name="origem"
+                    >
+                        <option value="">Todas</option>
+                        {(p.origens ?? []).map((o) => (
+                            <option key={o.valor} value={o.valor}>
+                                {o.rotulo}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+            )}
+
 
             {p.disponiveis.tipo && (
                 <div>

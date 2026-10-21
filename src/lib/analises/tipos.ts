@@ -9,6 +9,7 @@ export interface FiltroCentral {
   loteId?: number;
   tipoId?: number;
   siloId?: number;
+  origemId?: number;   // novo
   limite?: number;
   offset?: number;
 }
@@ -35,6 +36,7 @@ export interface OpcoesFormulario {
   lotes: OpcaoCombo[];
   tipos: OpcaoCombo[];
   silos?: OpcaoCombo[];
+  origens?: OpcaoCombo[];  // novo
 }
 
 export interface ResultadoCentral {
@@ -43,6 +45,7 @@ export interface ResultadoCentral {
   lotes: OpcaoCombo[];
   tipos: OpcaoCombo[];
   silos?: OpcaoCombo[];
+  origens?: OpcaoCombo[];  // novo
   resumos?: { label: string; valor: string }[];
 }
 
@@ -51,6 +54,7 @@ export interface FiltrosDisponiveis {
   lote?: boolean;
   tipo?: boolean;
   silo?: boolean;
+  origem?: boolean;
 }
 
 export interface FormularioBaseProps {
@@ -60,4 +64,5 @@ export interface FormularioBaseProps {
   lotes: OpcaoCombo[];
   tipos: OpcaoCombo[];
   silos?: OpcaoCombo[];
+  origens?: OpcaoCombo[];
 }

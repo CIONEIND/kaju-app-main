@@ -2,7 +2,8 @@ import { notFound, redirect } from "next/navigation";
 import { getUsuarioAtual } from "@/lib/auth/auth";
 import { getCurrentUserAccess } from "@/lib/rbac/access";
 import { PERMISSIONS } from "@/lib/rbac/permissions";
-import { FORMULARIOS, isTipoFormulario } from "@/lib/analises/formularios";
+import { FORMULARIOS } from "@/app/services/producao/analises/registry";
+import { isTipoFormulario } from "@/lib/analises/registro";
 
 export default async function EditarAnalisePage({
     params,

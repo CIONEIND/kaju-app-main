@@ -3,8 +3,7 @@
 import { Button, Modal, useOverlayState } from "@heroui/react";
 import { FileText, Plus } from "lucide-react";
 import Link from "next/link";
-import { FORMULARIOS } from "@/lib/analises/formularios";
-
+import { REGISTRO_META } from "@/lib/analises/registro";
 export function NovaAnaliseModal() {
   const state = useOverlayState();
 
@@ -28,7 +27,7 @@ export function NovaAnaliseModal() {
                   Escolha qual análise deseja registrar.
                 </p>
                 <ul className="flex flex-col gap-2">
-                  {Object.entries(FORMULARIOS).map(([tipo, formulario]) => (
+                  {Object.entries(REGISTRO_META).map(([tipo, meta]) => (
                     <li key={tipo}>
                       <Link
                         className="flex items-start gap-3 rounded-lg border border-border p-3 transition-colors hover:bg-surface-secondary"
@@ -38,10 +37,10 @@ export function NovaAnaliseModal() {
                         <FileText className="mt-0.5 size-4 shrink-0 text-accent" />
                         <span className="min-w-0">
                           <span className="block text-sm font-semibold text-foreground">
-                            {formulario.titulo}
+                            {meta.titulo}
                           </span>
                           <span className="block text-xs text-muted">
-                            {formulario.descricao}
+                            {meta.descricao}
                           </span>
                         </span>
                       </Link>

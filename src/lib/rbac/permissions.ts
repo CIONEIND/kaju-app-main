@@ -25,6 +25,7 @@ export const PERMISSIONS = {
   // Produção
   ANALISES_VIEW: "analises:view",     // novo
   ANALISES_MANAGE: "analises:manage", // novo
+  ANALISES_SEND: "analises:send",       // novo
   // Administração
   RBAC_MANAGE: "rbac:manage",
 } as const;
@@ -120,6 +121,11 @@ export const PERMISSION_CATALOG: PermissionCategory[] = [
         key: PERMISSIONS.ANALISES_MANAGE,
         label: "Gerenciar análises",
         description: "Criar, editar e excluir análises de produção.",
+      },
+      {
+        key: PERMISSIONS.ANALISES_SEND,
+        label: "Enviar análises por e-mail",
+        description: "Disparar e-mails com análises para destinatários.",
       },
     ],
   },

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { FORMULARIOS } from "@/lib/analises/formularios";
+import { FORMULARIOS } from "@/app/services/producao/analises/registry";
 
 export function SeletorFormulario({ tipoAtual }: { tipoAtual: string }) {
     return (

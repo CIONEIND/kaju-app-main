@@ -2,7 +2,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { FORMULARIOS } from "@/lib/analises/formularios";
+import { FORMULARIOS } from "@/app/services/producao/analises/registry";
 
 interface Props {
     aberto: boolean;

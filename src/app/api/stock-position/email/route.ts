@@ -9,14 +9,10 @@ interface SendEmailBody {
   subject: string;
   body: string;
   imageBase64: string;
-  imageWidth?: number;
 }
 
-const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
+const MAX_BYTES = 5 * 1024 * 1024; // limite do Resend por anexo
 const CID = "relatorio-posicao-estoque";
-
-const TIPOS = { "image/png": "png", "image/jpeg": "jpg" } as const;
-type MimeAceito = keyof typeof TIPOS;
 
 function escapeHtml(v: string): string {
   return v
@@ -29,7 +25,7 @@ function escapeHtml(v: string): string {
 export async function POST(request: Request) {
   try {
     await requirePermission(PERMISSIONS.STOCK_VIEW);
-    const { recipients, subject, body, imageBase64, imageWidth }: SendEmailBody =
+    const { recipients, subject, body, imageBase64 }: SendEmailBody =
       await request.json();
 
     if (!recipients?.length) {
@@ -46,63 +42,41 @@ export async function POST(request: Request) {
       );
     }
 
-    // Aceita apenas "data:image/png;base64,..." ou "data:image/jpeg;base64,..."
-    const match = /^data:(image\/(?:png|jpeg));base64,([A-Za-z0-9+/=\s]+)$/.exec(
-      imageBase64.trim(),
-    );
+    // Aceita data URI (png/jpeg) ou base64 puro
+    const base64Data = imageBase64
+      .replace(/^data:image\/(png|jpeg);base64,/, "")
+      .replace(/\s/g, "");
 
-    if (!match) {
+    const bytes = Math.ceil((base64Data.length * 3) / 4);
+    if (bytes > MAX_BYTES) {
       return Response.json(
-        { message: "Formato inválido. Envie uma imagem PNG ou JPEG em data URI." },
-        { status: 400 },
-      );
-    }
-
-    const mime = match[1] as MimeAceito;
-    const base64 = match[2].replace(/\s/g, "");
-    const ext = TIPOS[mime];
-
-    const bytes = Math.ceil((base64.length * 3) / 4);
-    if (bytes > MAX_IMAGE_BYTES) {
-      return Response.json(
-        { message: "Imagem acima do limite de 4 MB. Reduza o recorte." },
+        { message: "Imagem acima de 5 MB. Reduza o recorte e tente novamente." },
         { status: 413 },
       );
     }
 
-    const largura = Math.min(Math.max(imageWidth ?? 640, 320), 640);
-    const fileDate = new Date().toISOString().slice(0, 10);
     const finalSubject = applyDeseSubjectPrefix(subject);
+    const fileDate = new Date().toISOString().slice(0, 10);
 
     const bodyHtml = `
-<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;color:#0f172a;max-width:680px;margin:0 auto;">
-  ${body ? `<p style="font-size:15px;line-height:1.6;margin:0 0 24px;">${escapeHtml(body).replace(/\n/g, "<br/>")}</p>` : ""}
-  <p style="font-size:14px;line-height:1.6;color:#334155;margin:0 0 16px;">
-    Segue abaixo o relatório de posição de estoque.
-  </p>
-  <img
-    src="cid:${CID}"
-    alt="Relatório de posição de estoque"
-    width="${largura}"
-    style="display:block;width:100%;max-width:${largura}px;height:auto;border:0;outline:none;"
-  />
-  <p style="font-size:12px;line-height:1.5;color:#94a3b8;margin:20px 0 0;">
-    Relatório gerado em ${fileDate}.
-  </p>
-</div>`;
+      <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#0f172a;max-width:720px;margin:0 auto;">
+        ${body ? `<p style="font-size:15px;line-height:1.6;margin-bottom:24px;">${escapeHtml(body).replace(/\n/g, "<br/>")}</p>` : ""}
+        <img src="cid:${CID}" alt="Posição de estoque" style="max-width:100%;border-radius:8px;" />
+      </div>
+    `;
 
     const { error } = await resend.emails.send({
       from: EMAIL_FROM,
       to: recipients[0],
-      bcc: recipients.slice(1),
+      bcc: recipients.length > 1 ? recipients.slice(1) : undefined,
       subject: finalSubject,
       html: bodyHtml,
       attachments: [
         {
-          filename: `posicao-estoque-${fileDate}.${ext}`,
-          content: base64,
-          contentType: mime,
+          content: base64Data,
+          filename: `posicao-estoque-${fileDate}.png`,
           contentId: CID,
+          contentType: "image/png",
         },
       ],
     });

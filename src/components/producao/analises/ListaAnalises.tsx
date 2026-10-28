@@ -4,9 +4,11 @@ import { CardAnalise } from "./CardAnalise";
 export function ListaAnalises({
     itens,
     basePath,
+    tipo,
 }: {
     itens: CardAnaliseDados[];
     basePath: string;
+    tipo: string;
 }) {
     if (itens.length === 0) {
         return (
@@ -19,7 +21,7 @@ export function ListaAnalises({
     return (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {itens.map((item) => (
-                <CardAnalise basePath={basePath} item={item} key={item.id} />
+                <CardAnalise basePath={basePath} item={item} key={item.id} tipo={tipo} />
             ))}
         </div>
     );

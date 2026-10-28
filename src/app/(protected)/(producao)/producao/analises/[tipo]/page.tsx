@@ -117,7 +117,7 @@ export default async function CentralTipoPage({
                     : `${total} registro${total !== 1 ? "s" : ""} · página ${pagina} de ${totalPaginas}`}
             </p>
 
-            <ListaAnalises basePath={basePath} itens={itens} />
+            <ListaAnalises basePath={basePath} itens={itens} tipo={tipo} />
 
             <Paginacao pagina={pagina} totalPaginas={totalPaginas} urlComPagina={urlComPagina} />
         </main>

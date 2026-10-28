@@ -1,13 +1,16 @@
 import { Eye, Pencil } from "lucide-react";
 import Link from "next/link";
 import type { CardAnaliseDados } from "@/lib/analises/tipos";
+import { CardAnaliseAcoes } from "./CardAnaliseAcoes";
 
 export function CardAnalise({
     item,
     basePath,
+    tipo,
 }: {
     item: CardAnaliseDados;
     basePath: string;
+    tipo: string;
 }) {
     return (
         <article className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-5 shadow-sm transition-shadow hover:shadow-md">
@@ -31,7 +34,10 @@ export function CardAnalise({
 
             <div className="grid grid-cols-2 gap-2">
                 {item.metricas.map((m) => (
-                    <div className="rounded-lg bg-surface-secondary px-3 py-2" key={m.label}>
+                    <div
+                        className="rounded-lg bg-surface-secondary px-3 py-2"
+                        key={m.label}
+                    >
                         <p className="text-[11px] font-medium uppercase tracking-wide text-muted">
                             {m.label}
                         </p>
@@ -40,7 +46,9 @@ export function CardAnalise({
                 ))}
             </div>
 
-            <div className="mt-auto flex items-center justify-end gap-1 border-t border-border pt-3">
+            <div className="mt-auto flex flex-wrap items-center justify-end gap-1 border-t border-border pt-3">
+                <CardAnaliseAcoes item={item} tipo={tipo} />
+
                 <Link
                     aria-label={`Visualizar análise ${item.id}`}
                     className="rounded-md p-1.5 text-muted hover:bg-surface-secondary hover:text-foreground"

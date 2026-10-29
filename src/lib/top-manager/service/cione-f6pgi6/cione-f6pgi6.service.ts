@@ -49,6 +49,9 @@ export default class CioneF6PGI6Service {
     }
     return v.data;
   }
+  private statusNum(s?: "rascunho" | "concluida"): number {
+  return s === "rascunho" ? 0 : 1;
+}
 
   async criar(dto: SalvarAnaliseF6PGI6SchemaType, tsx: Knex = this.db) {
     const v = this.validar(dto);
@@ -61,6 +64,7 @@ export default class CioneF6PGI6Service {
         Tipo: v.tipoId,
         Cubagem: v.cubagem ?? null,
         Consumo: v.consumo ?? null,
+        Status: this.statusNum(v.status),
       },
       tsx,
     );
@@ -82,6 +86,7 @@ export default class CioneF6PGI6Service {
         Tipo: v.tipoId,
         Cubagem: v.cubagem ?? null,
         Consumo: v.consumo ?? null,
+        Status: this.statusNum(v.status),
       },
       tsx,
     );

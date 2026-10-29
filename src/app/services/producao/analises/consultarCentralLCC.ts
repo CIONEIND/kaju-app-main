@@ -9,6 +9,8 @@ import type {
   FiltroCentral,
   ResultadoCentral,
 } from "@/lib/analises/tipos";
+import { formatarDataBR } from "@/lib/analises/numerico";
+import { resolverFiltroStatus, statusDoCard } from "@/lib/analises/status-filtro";
 
 const service = new CioneLCCService();
 
@@ -27,21 +29,33 @@ export async function consultarCentralLCC(
   if (!usuario) throw new Error("Sessão expirada.");
   await requirePermission(PERMISSIONS.ANALISES_VIEW);
 
+  const { status, filtro: f } = resolverFiltroStatus(
+    filtro,
+    usuario.cdUsrTopManager,
+  );
+
   const [analises, total, lotes, origens, resumo] = await Promise.all([
-    service.listar(filtro),
-    service.contar(filtro),
+    service.listar(f),
+    service.contar(f),
     service.listarLotes(),
     service.listarOrigens(),
-    service.resumo(filtro),
+    status === "rascunho"
+      ? Promise.resolve({ quantidade: 0, total: 0 })
+      : service.resumo({ ...f, status: "concluida" }),
   ]);
 
   return {
     itens: analises.map((a) => ({
       id: a.id,
       titulo: a.origemNome ?? "—",
+      status: statusDoCard(a.status),
       linhas: [
         { label: "Lote", valor: a.loteNome ?? "—" },
-        { label: "Data", valor: `${a.data}${a.hora ? ` · ${a.hora}` : ""}` },
+        { label: "Origem", valor: a.origemNome ?? "—" },
+        {
+          label: "Data",
+          valor: `${formatarDataBR(a.data)}${a.hora ? ` · ${a.hora}` : ""}`,
+        },
         { label: "Responsável", valor: a.responsavelNome ?? "—" },
       ],
       metricas: [
@@ -55,12 +69,16 @@ export async function consultarCentralLCC(
     lotes: lotes.map((l) => ({ valor: String(l.id), rotulo: l.nome })),
     tipos: [],
     origens: origens.map((o) => ({ valor: String(o.cdObj), rotulo: o.nome })),
-    resumos: [
-      {
-        label: `Resumo geral · ${resumo.quantidade} registro${resumo.quantidade !== 1 ? "s" : ""}`,
-        valor: num(resumo.total),
-      },
-    ],
+    status,
+    resumos:
+      status === "rascunho"
+        ? []
+        : [
+            {
+              label: `Resumo geral · ${resumo.quantidade} registro${resumo.quantidade !== 1 ? "s" : ""}`,
+              valor: num(resumo.total),
+            },
+          ],
   };
 }
 

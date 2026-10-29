@@ -1,3 +1,6 @@
+import type { StatusAnalise } from "@/lib/analises/tipos";
+
+/** Linha crua da tabela CIONE_ResultadoLCCDiario (dbo) */
 export interface CioneLCCRow {
   ID: number;
   DATAHORA: Date | string;
@@ -7,8 +10,11 @@ export interface CioneLCCRow {
   Viscosidade: number | null;
   Altura: number | null;
   Temperatura: number | null;
+  /** 0 = rascunho · 1 = concluída (NOT NULL DEFAULT 1) */
+  Status: number;
 }
 
+/** Registro normalizado: 1 linha por análise, data/hora já em texto */
 export interface AnaliseLCC {
   id: number;
   data: string;
@@ -22,6 +28,8 @@ export interface AnaliseLCC {
   viscosidade: number | null;
   altura: number | null;
   temperatura: number | null;
+  /** 0 = rascunho · 1 = concluída */
+  status: number;
   /** Calculado — não vem da tabela */
   resultado: number | null;
 }
@@ -29,4 +37,17 @@ export interface AnaliseLCC {
 export interface ResumoLCC {
   total: number;
   quantidade: number;
+}
+
+/** ⚠️ Este arquivo não tinha filtro — adicionado agora */
+export interface FiltroAnaliseLCC {
+  dtInicial?: string;
+  dtFinal?: string;
+  loteId?: number;
+  origemId?: number;
+  status?: StatusAnalise;
+  /** Injetado pela action quando o status é rascunho */
+  responsavelCdUsr?: number;
+  limite?: number;
+  offset?: number;
 }

@@ -10,6 +10,9 @@ import type {
   FiltroCentral,
   ResultadoCentral,
 } from "@/lib/analises/tipos";
+import { formatarDataBR } from "@/lib/analises/numerico";
+import { resolverFiltroStatus, statusDoCard } from "@/lib/analises/status-filtro";
+
 
 const service = new CioneF3PGI6Service();
 
@@ -20,7 +23,6 @@ const num = (v: number | null) =>
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
       });
-
 export async function consultarCentralF3PGI6(
   filtro: FiltroCentral,
 ): Promise<ResultadoCentral> {
@@ -28,9 +30,14 @@ export async function consultarCentralF3PGI6(
   if (!usuario) throw new Error("Sessão expirada.");
   await requirePermission(PERMISSIONS.ANALISES_VIEW);
 
+  const { status, filtro: f } = resolverFiltroStatus(
+    filtro,
+    usuario.cdUsrTopManager,
+  );
+
   const [analises, total, lotes, tipos] = await Promise.all([
-    service.listar(filtro),
-    service.contar(filtro),
+    service.listar(f),
+    service.contar(f),
     service.listarLotes(),
     service.listarTipos(),
   ]);
@@ -39,9 +46,13 @@ export async function consultarCentralF3PGI6(
     itens: analises.map((a) => ({
       id: a.id,
       titulo: a.tipoNome ?? "—",
+      status: statusDoCard(a.status),
       linhas: [
         { label: "Lote", valor: a.loteNome ?? "—" },
-        { label: "Data", valor: `${a.data}${a.hora ? ` · ${a.hora}` : ""}` },
+        {
+          label: "Data",
+          valor: `${formatarDataBR(a.data)}${a.hora ? ` · ${a.hora}` : ""}`,
+        },
         { label: "Responsável", valor: a.responsavelNome ?? "—" },
       ],
       metricas: [
@@ -52,9 +63,10 @@ export async function consultarCentralF3PGI6(
     total,
     lotes: lotes.map((l) => ({ valor: String(l.id), rotulo: l.nome })),
     tipos: tipos.map((t) => ({ valor: String(t.cdObj), rotulo: t.nome })),
+    origens: [],
+    status,
   };
 }
-
 export async function carregarF3PGI6(id: number): Promise<DetalheAnalise | null> {
   const usuario = await getUsuarioAtual();
   if (!usuario) throw new Error("Sessão expirada.");
@@ -73,7 +85,7 @@ export async function carregarF3PGI6(id: number): Promise<DetalheAnalise | null>
   return {
     id: a.id,
     titulo: `Análise F3PGI6 #${a.id}`,
-    subtitulo: `${a.responsavelNome ?? "—"} · ${a.data}${a.hora ? ` · ${a.hora}` : ""}`,
+    subtitulo: `${a.responsavelNome ?? "—"} · ${formatarDataBR(a.data)}${a.hora ? ` · ${a.hora}` : ""}`,
     identificacao: [
       { label: "Lote", valor: a.loteNome ?? "—" },
       { label: "Tipo", valor: a.tipoNome ?? "—" },

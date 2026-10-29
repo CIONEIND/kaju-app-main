@@ -1,3 +1,5 @@
+import type { StatusAnalise } from "@/lib/analises/tipos";
+
 /** Linha crua da tabela CIONE_F3PGI6 (dbo) */
 export interface CioneF3PGI6Row {
   ID: number;
@@ -11,6 +13,8 @@ export interface CioneF3PGI6Row {
   t1Casca: number | null;
   t2Casca: number | null;
   t3Casca: number | null;
+  /** 0 = rascunho · 1 = concluída (NOT NULL DEFAULT 1) */
+  Status: number;
 }
 
 /** Registro normalizado: 1 linha por análise, data/hora já em texto */
@@ -32,6 +36,8 @@ export interface AnaliseF3PGI6 {
   t3Casca: number | null;
   mediaAmendoa: number | null;
   mediaCasca: number | null;
+  /** 0 = rascunho · 1 = concluída */
+  status: number;
 }
 
 export interface LoteSemanalOpcao {
@@ -46,9 +52,11 @@ export interface TipoObjetoOpcao {
 
 export interface FiltroAnaliseF3PGI6 {
   dtInicial?: string; // YYYY-MM-DD
-  dtFinal?: string;   // YYYY-MM-DD
+  dtFinal?: string; // YYYY-MM-DD
   loteId?: number;
   tipoId?: number;
+  status?: StatusAnalise;
+  /** Já existia — usado para privacidade do rascunho */
   responsavelCdUsr?: number;
   limite?: number;
   offset?: number;

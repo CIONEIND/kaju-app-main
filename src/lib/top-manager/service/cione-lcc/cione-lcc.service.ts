@@ -38,7 +38,9 @@ export default class CioneLCCService {
     if (!v.success) throw new Error(v.error.issues[0]?.message ?? "Dados inválidos.");
     return v.data;
   }
-
+  private statusNum(s?: "rascunho" | "concluida"): number {
+    return s === "rascunho" ? 0 : 1;
+  }
   /**
    * ATENÇÃO: Resultado NÃO é gravado — é derivado de Altura e Temperatura.
    * Só os três insumos vão para o banco.
@@ -54,6 +56,7 @@ export default class CioneLCCService {
         Viscosidade: v.viscosidade ?? null,
         Altura: v.altura ?? null,
         Temperatura: v.temperatura ?? null,
+        Status: this.statusNum(v.status),
       },
       tsx,
     );
@@ -75,6 +78,7 @@ export default class CioneLCCService {
         Viscosidade: v.viscosidade ?? null,
         Altura: v.altura ?? null,
         Temperatura: v.temperatura ?? null,
+        Status: this.statusNum(v.status),
       },
       tsx,
     );

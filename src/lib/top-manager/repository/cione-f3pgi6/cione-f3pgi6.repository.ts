@@ -7,6 +7,7 @@ import type {
   LoteSemanalOpcao,
   TipoObjetoOpcao,
 } from "./types";
+import { aplicarStatus } from "../filtro/analises-filtro";
 
 const TABELA = "CIONE_F3PGI6";
 const SCHEMA = "dbo";
@@ -34,6 +35,7 @@ function toAnalise(row: Record<string, unknown>): AnaliseF3PGI6 {
     hora: (row.Hora as string) ?? "",
     responsavelCdUsr: (row.Responsavel as number | null) ?? null,
     responsavelNome: (row.ResponsavelNome as string | null) ?? null,
+    status: Number(row.Status ?? 1),
     loteId: (row.Lote as number | null) ?? null,
     loteNome: (row.LoteNome as string | null) ?? null,
     tipoId: (row.Tipo as number | null) ?? null,
@@ -74,6 +76,7 @@ export default class CioneF3PGI6Repository {
         "C.t1Casca",
         "C.t2Casca",
         "C.t3Casca",
+        "C.Status",
         "ObjTp.NmObj as TipoNome",
         "UsrResp.NmUsr as ResponsavelNome",
         "LS.NomeLote as LoteNome",
@@ -95,6 +98,7 @@ export default class CioneF3PGI6Repository {
     if (filtro.responsavelCdUsr !== undefined) {
       q.where("C.Responsavel", filtro.responsavelCdUsr);
     }
+    aplicarStatus(q, filtro);
   }
 
   static async listar(
@@ -160,6 +164,7 @@ export default class CioneF3PGI6Repository {
       .withSchema(SCHEMA)
       .table("CIONE_LotesSemanais")
       .select("Id as id", "NomeLote as nome")
+      .andWhereILike("NomeLote", "01-C%")
       .orderBy("NomeLote", "asc");
 
     return rows.map((r: { id: number; nome: string | null }) => ({

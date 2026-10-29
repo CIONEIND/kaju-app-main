@@ -1,13 +1,23 @@
 "use client";
 
+import { Button, useOverlayState } from "@heroui/react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import {
     salvarAnaliseF6PGI6,
     type SalvarAnaliseF6PGI6Input,
 } from "@/app/services/producao/analises/salvarAnaliseF6PGI6";
-import type { FormularioBaseProps } from "@/lib/analises/tipos";
+import { CampoNumerico } from "@/components/producao/ui/CampoNumerico";
 import { Combobox } from "@/components/producao/ui/Combobox";
+import {
+    formatarDataBR,
+    paraNumero,
+    paraTexto,
+} from "@/lib/analises/numerico";
+import type { FormularioBaseProps } from "@/lib/analises/tipos";
+import { ConfirmarSalvarModal } from "./ConfirmarSalvarModal";
+import { useRascunho } from "./useRascunho";
 
 interface Medicoes {
     cubagem: string;
@@ -26,19 +36,9 @@ function agora(): string {
     return `${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
-function texto(v: number | null | undefined): string {
-    return v === null || v === undefined ? "" : String(v);
-}
-
-function paraNumero(t: string): number | null {
-    const limpo = t.trim().replace(",", ".");
-    if (limpo === "") return null;
-    const n = Number(limpo);
-    return Number.isFinite(n) ? n : null;
-}
-
 export function FormularioF6PGI6({
     modo = "novo",
+    tipo = "F6PGI6",
     dadosIniciais,
     usuario,
     lotes,
@@ -46,7 +46,9 @@ export function FormularioF6PGI6({
     silos = [],
 }: FormularioBaseProps) {
     const router = useRouter();
+    const confirmacao = useOverlayState();
     const editando = modo === "editar" && dadosIniciais !== undefined;
+    const basePath = `/producao/analises/${tipo}`;
 
     const [lote, setLote] = useState(
         dadosIniciais?.loteId != null ? String(dadosIniciais.loteId) : "",
@@ -54,52 +56,88 @@ export function FormularioF6PGI6({
     const [silo, setSilo] = useState(
         dadosIniciais?.siloId != null ? String(dadosIniciais.siloId) : "",
     );
-    const [tipo, setTipo] = useState(
+    const [tipoId, setTipoId] = useState(
         dadosIniciais?.tipoId != null ? String(dadosIniciais.tipoId) : "",
     );
     const [data, setData] = useState(dadosIniciais?.data ?? hoje());
     const [hora, setHora] = useState(dadosIniciais?.hora ?? agora());
+
     const [medicoes, setMedicoes] = useState<Medicoes>({
-        cubagem: texto(dadosIniciais?.cubagem),
-        consumo: texto(dadosIniciais?.consumo),
+        cubagem: paraTexto(dadosIniciais?.cubagem),
+        consumo: paraTexto(dadosIniciais?.consumo),
     });
+
+    const [rascunhoId, setRascunhoId] = useState<number | null>(
+        dadosIniciais?.id ?? null,
+    );
     const [enviando, setEnviando] = useState(false);
     const [erro, setErro] = useState<string | null>(null);
 
     const semVinculo = usuario.cdUsrTopManager === null;
+    const podeRascunhar =
+        Boolean(lote) && Boolean(silo) && Boolean(tipoId) && Boolean(data) && !semVinculo;
 
-    async function handleSubmit(e: FormEvent<HTMLFormElement>) {
+    const { salvando, ultimoSalvo, cancelar } = useRascunho({
+        habilitado: podeRascunhar && !editando && !enviando,
+        dados: { lote, silo, tipoId, data, hora, medicoes },
+        idAtual: rascunhoId,
+        salvar: async (d, id) => {
+            const r = await salvarAnaliseF6PGI6({
+                id: id ?? undefined,
+                status: "rascunho",
+                data: d.data,
+                hora: d.hora || undefined,
+                responsavelCdUsr: usuario.cdUsrTopManager as number,
+                loteId: Number(d.lote),
+                siloId: Number(d.silo),
+                tipoId: Number(d.tipoId),
+                cubagem: paraNumero(d.medicoes.cubagem),
+                consumo: paraNumero(d.medicoes.consumo),
+            });
+            return r.ok ? { ok: true, id: r.id } : { ok: false, erro: r.erro };
+        },
+        onId: setRascunhoId,
+    });
+
+    function handleSubmit(e: FormEvent<HTMLFormElement>) {
         e.preventDefault();
         setErro(null);
 
         if (!lote) return setErro("Selecione o lote.");
         if (!silo) return setErro("Selecione o silo.");
-        if (!tipo) return setErro("Selecione o tipo.");
+        if (!tipoId) return setErro("Selecione o tipo.");
         if (!data) return setErro("Informe a data da análise.");
-        if (semVinculo) {
-            return setErro("Usuário sem vínculo com o TopManager.");
-        }
+        if (semVinculo) return setErro("Usuário sem vínculo com o TopManager.");
 
+        confirmacao.open();
+    }
+
+    async function confirmarSalvar() {
+        cancelar();
         setEnviando(true);
         try {
             const input: SalvarAnaliseF6PGI6Input = {
-                id: editando ? dadosIniciais.id : undefined,
+                id: rascunhoId ?? undefined,
+                status: "concluida",
                 data,
                 hora: hora || undefined,
                 responsavelCdUsr: usuario.cdUsrTopManager as number,
                 loteId: Number(lote),
                 siloId: Number(silo),
-                tipoId: Number(tipo),
+                tipoId: Number(tipoId),
                 cubagem: paraNumero(medicoes.cubagem),
                 consumo: paraNumero(medicoes.consumo),
             };
 
             const r = await salvarAnaliseF6PGI6(input);
             if (!r.ok) {
+                confirmacao.close();
                 setErro(r.erro);
                 return;
             }
-            router.push(`/producao/analises/F6PGI6/${r.id}`);
+
+            router.push(basePath);
+            router.refresh();
         } finally {
             setEnviando(false);
         }
@@ -108,28 +146,80 @@ export function FormularioF6PGI6({
     function limpar() {
         setLote("");
         setSilo("");
-        setTipo("");
+        setTipoId("");
         setData(hoje());
         setHora(agora());
         setMedicoes({ cubagem: "", consumo: "" });
+        setRascunhoId(null);
         setErro(null);
     }
 
+    const resumo = [
+        {
+            label: "Lote",
+            valor: lotes.find((l) => l.valor === lote)?.rotulo ?? "—",
+        },
+        {
+            label: "Silo",
+            valor: silos.find((s) => s.valor === silo)?.rotulo ?? "—",
+        },
+        {
+            label: "Tipo",
+            valor: tipos.find((t) => t.valor === tipoId)?.rotulo ?? "—",
+        },
+        {
+            label: "Data",
+            valor: `${formatarDataBR(data)}${hora ? ` · ${hora}` : ""}`,
+        },
+        { label: "Cubagem", valor: medicoes.cubagem || "—" },
+        { label: "Consumo", valor: medicoes.consumo || "—" },
+    ];
+
+    const campoData =
+        "w-full rounded-lg border border-border bg-surface-secondary px-3 py-2 text-base outline-none focus:ring-2 focus:ring-primary/30 sm:text-sm";
+
     return (
         <div className="rounded-xl border border-border bg-surface shadow-sm">
-            <div className="border-b border-border px-6 py-4">
-                <h2 className="text-lg font-semibold text-foreground">
-                    {editando ? "Editar análise — F6PGI6" : "Nova análise — F6PGI6"}
-                </h2>
-                <p className="text-sm text-muted">
-                    Responsável:{" "}
-                    <span className="font-medium text-foreground">{usuario.nome}</span>
-                    {usuario.cdUsrTopManager !== null && (
-                        <span className="ml-2 rounded-full bg-accent/10 px-2 py-0.5 text-xs font-medium text-accent">
-                            CdUsr {usuario.cdUsrTopManager}
+            <div className="flex items-center gap-3 border-b border-border px-6 py-4">
+                <button
+                    aria-label="Voltar para a central"
+                    className="rounded-md p-1.5 text-muted hover:bg-surface-secondary hover:text-foreground"
+                    onClick={() => router.push(basePath)}
+                    type="button"
+                >
+                    <ArrowLeft size={18} />
+                </button>
+
+                <div className="min-w-0">
+                    <h2 className="text-lg font-semibold text-foreground">
+                        {editando ? "Editar análise — F6PGI6" : "Nova análise — F6PGI6"}
+                    </h2>
+                    <p className="flex flex-wrap items-center gap-2 text-sm text-muted">
+                        <span>
+                            Responsável:{" "}
+                            <span className="font-medium text-foreground">{usuario.nome}</span>
                         </span>
-                    )}
-                </p>
+                        {!editando && (
+                            <span className="inline-flex items-center gap-1 text-xs">
+                                {salvando ? (
+                                    <>
+                                        <Loader2 className="size-3 animate-spin" />
+                                        Salvando rascunho…
+                                    </>
+                                ) : ultimoSalvo ? (
+                                    `Rascunho salvo às ${ultimoSalvo.toLocaleTimeString("pt-BR", {
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                    })}`
+                                ) : podeRascunhar ? (
+                                    "Rascunho automático ativo"
+                                ) : (
+                                    ""
+                                )}
+                            </span>
+                        )}
+                    </p>
+                </div>
             </div>
 
             {semVinculo && (
@@ -144,36 +234,61 @@ export function FormularioF6PGI6({
                 </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-5 px-6 py-5">
+            <form className="space-y-5 px-6 py-5" onSubmit={handleSubmit}>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
-                        <label className="mb-1.5 block text-sm font-medium text-foreground">Lote *</label>
-                        <Combobox opcoes={lotes} valor={lote} onChange={setLote} placeholder="Selecionar lote..." />
-                    </div>
-                    <div>
-                        <label className="mb-1.5 block text-sm font-medium text-foreground">Silo *</label>
-                        <Combobox opcoes={silos} valor={silo} onChange={setSilo} placeholder="Selecionar silo..." />
-                    </div>
-                    <div>
-                        <label className="mb-1.5 block text-sm font-medium text-foreground">Tipo *</label>
-                        <Combobox opcoes={tipos} valor={tipo} onChange={setTipo} placeholder="Selecionar tipo..." />
-                    </div>
-                    <div>
-                        <label className="mb-1.5 block text-sm font-medium text-foreground">Data *</label>
-                        <input
-                            type="date"
-                            value={data}
-                            onChange={(e) => setData(e.target.value)}
-                            className="w-full rounded-lg border border-border bg-surface-secondary px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/30"
+                        <label className="mb-1.5 block text-sm font-medium text-foreground">
+                            Lote *
+                        </label>
+                        <Combobox
+                            onChange={setLote}
+                            opcoes={lotes}
+                            placeholder="Selecionar lote..."
+                            valor={lote}
                         />
                     </div>
                     <div>
-                        <label className="mb-1.5 block text-sm font-medium text-foreground">Hora</label>
+                        <label className="mb-1.5 block text-sm font-medium text-foreground">
+                            Silo *
+                        </label>
+                        <Combobox
+                            onChange={setSilo}
+                            opcoes={silos}
+                            placeholder="Selecionar silo..."
+                            valor={silo}
+                        />
+                    </div>
+                    <div>
+                        <label className="mb-1.5 block text-sm font-medium text-foreground">
+                            Tipo *
+                        </label>
+                        <Combobox
+                            onChange={setTipoId}
+                            opcoes={tipos}
+                            placeholder="Selecionar tipo..."
+                            valor={tipoId}
+                        />
+                    </div>
+                    <div>
+                        <label className="mb-1.5 block text-sm font-medium text-foreground">
+                            Data *
+                        </label>
                         <input
+                            className={campoData}
+                            onChange={(e) => setData(e.target.value)}
+                            type="date"
+                            value={data}
+                        />
+                    </div>
+                    <div>
+                        <label className="mb-1.5 block text-sm font-medium text-foreground">
+                            Hora
+                        </label>
+                        <input
+                            className={campoData}
+                            onChange={(e) => setHora(e.target.value)}
                             type="time"
                             value={hora}
-                            onChange={(e) => setHora(e.target.value)}
-                            className="w-full rounded-lg border border-border bg-surface-secondary px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/30"
                         />
                     </div>
                 </div>
@@ -184,47 +299,50 @@ export function FormularioF6PGI6({
                     </legend>
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                         <div>
-                            <label className="mb-1 block text-xs font-medium text-muted">Cubagem</label>
-                            <input
-                                type="text"
-                                inputMode="decimal"
+                            <label className="mb-1 block text-xs font-medium text-muted">
+                                Cubagem
+                            </label>
+                            <CampoNumerico
+                                onChange={(v) => setMedicoes((p) => ({ ...p, cubagem: v }))}
                                 value={medicoes.cubagem}
-                                onChange={(e) => setMedicoes((p) => ({ ...p, cubagem: e.target.value }))}
-                                placeholder="0,00"
-                                className="w-full rounded-lg border border-border bg-surface-secondary px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/30"
                             />
                         </div>
                         <div>
-                            <label className="mb-1 block text-xs font-medium text-muted">Consumo</label>
-                            <input
-                                type="text"
-                                inputMode="decimal"
+                            <label className="mb-1 block text-xs font-medium text-muted">
+                                Consumo
+                            </label>
+                            <CampoNumerico
+                                onChange={(v) => setMedicoes((p) => ({ ...p, consumo: v }))}
                                 value={medicoes.consumo}
-                                onChange={(e) => setMedicoes((p) => ({ ...p, consumo: e.target.value }))}
-                                placeholder="0,00"
-                                className="w-full rounded-lg border border-border bg-surface-secondary px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/30"
                             />
                         </div>
                     </div>
                 </fieldset>
 
                 <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
-                    <button
-                        type="button"
-                        onClick={() => (editando ? router.back() : limpar())}
-                        className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted hover:text-foreground"
+                    <Button
+                        onPress={() => (editando ? router.push(basePath) : limpar())}
+                        variant="secondary"
                     >
                         {editando ? "Cancelar" : "Limpar"}
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                        isDisabled={enviando || semVinculo}
                         type="submit"
-                        disabled={enviando || semVinculo}
-                        className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+                        variant="primary"
                     >
                         {enviando ? "Salvando..." : "Salvar análise"}
-                    </button>
+                    </Button>
                 </div>
             </form>
+
+            <ConfirmarSalvarModal
+                editando={editando}
+                enviando={enviando}
+                onConfirmar={confirmarSalvar}
+                resumo={resumo}
+                state={confirmacao}
+            />
         </div>
     );
 }

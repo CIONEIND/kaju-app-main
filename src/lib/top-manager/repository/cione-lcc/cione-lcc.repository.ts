@@ -5,6 +5,7 @@ import type {
   CioneLCCRow,
 } from "./types"; // ajuste para o caminho real do FiltroCentral ou redefina
 import { FiltroCentral } from "@/lib/analises/tipos";
+import { aplicarStatus } from "../filtro/analises-filtro";
 
 const TABELA = "CIONE_ResultadoLCCDiario";
 const SCHEMA = "dbo";
@@ -41,6 +42,7 @@ function toAnalise(row: Record<string, unknown>): AnaliseLCC {
     altura: n(row.Altura),
     temperatura: n(row.Temperatura),
     resultado: n(row.Resultado),
+    status: Number(row.Status ?? 1),
   };
 }
 
@@ -65,6 +67,7 @@ export default class CioneLCCRepository {
         "C.Viscosidade",
         "C.Altura",
         "C.Temperatura",
+        "C.Status",
         tsx.raw(`CONVERT(decimal(19,2), ${FORMULA_RESULTADO_SQL}) as Resultado`),
         "ObjOri.NmObj as OrigemNome",
         "UsrResp.NmUsr as ResponsavelNome",
@@ -84,6 +87,7 @@ export default class CioneLCCRepository {
     }
     if (filtro.loteId !== undefined) q.where("C.Lote", filtro.loteId);
     if (filtro.origemId !== undefined) q.where("C.Origem", filtro.origemId);
+    aplicarStatus(q, filtro);
   }
 
   static async listar(
@@ -152,6 +156,7 @@ export default class CioneLCCRepository {
       .withSchema(SCHEMA)
       .table("CIONE_LotesSemanais")
       .select("Id as id", "NomeLote as nome")
+      .andWhereILike("NomeLote", "01-C%")
       .orderBy("NomeLote", "asc");
     return rows.map((r: { id: number; nome: string | null }) => ({
       id: r.id,

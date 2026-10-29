@@ -59,7 +59,9 @@ export default class CioneF3PGI6Service {
     }
     return validation.data;
   }
-
+  private statusNum(s?: "rascunho" | "concluida"): number {
+  return s === "rascunho" ? 0 : 1;
+}
   async criar(dto: SalvarAnaliseF3PGI6SchemaType, tsx: Knex = this.db) {
     const v = this.validar(dto);
     return CioneF3PGI6Repository.inserir(
@@ -74,6 +76,7 @@ export default class CioneF3PGI6Service {
         t1Casca: v.t1Casca ?? null,
         t2Casca: v.t2Casca ?? null,
         t3Casca: v.t3Casca ?? null,
+        Status: this.statusNum(v.status),
       },
       tsx,
     );
@@ -98,6 +101,7 @@ export default class CioneF3PGI6Service {
         t1Casca: v.t1Casca ?? null,
         t2Casca: v.t2Casca ?? null,
         t3Casca: v.t3Casca ?? null,
+        Status: this.statusNum(v.status),
       },
       tsx,
     );

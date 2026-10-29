@@ -1,13 +1,23 @@
 "use client";
 
+import { Button, useOverlayState } from "@heroui/react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, type FormEvent } from "react";
 import {
     salvarAnaliseLCC,
     type SalvarAnaliseLCCInput,
 } from "@/app/services/producao/analises/salvarAnaliseLCC";
+import { CampoNumerico } from "@/components/producao/ui/CampoNumerico";
 import { Combobox } from "@/components/producao/ui/Combobox";
+import {
+    formatarDataBR,
+    paraNumero,
+    paraTexto,
+} from "@/lib/analises/numerico";
 import type { FormularioBaseProps } from "@/lib/analises/tipos";
+import { ConfirmarSalvarModal } from "./ConfirmarSalvarModal";
+import { useRascunho } from "./useRascunho";
 
 /**
  * MESMA fórmula do banco (FORMULA_RESULTADO_SQL).
@@ -33,18 +43,7 @@ function agora(): string {
     return `${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
-function texto(v: number | null | undefined): string {
-    return v === null || v === undefined ? "" : String(v);
-}
-
-function paraNumero(t: string): number | null {
-    const limpo = t.trim().replace(",", ".");
-    if (limpo === "") return null;
-    const n = Number(limpo);
-    return Number.isFinite(n) ? n : null;
-}
-
-function formatar(v: number | null): string {
+function formatarNumero(v: number | null): string {
     if (v === null) return "—";
     return v.toLocaleString("pt-BR", {
         minimumFractionDigits: 2,
@@ -54,13 +53,16 @@ function formatar(v: number | null): string {
 
 export function FormularioLCC({
     modo = "novo",
+    tipo = "LCC",
     dadosIniciais,
     usuario,
     lotes,
     origens = [],
 }: FormularioBaseProps) {
     const router = useRouter();
+    const confirmacao = useOverlayState();
     const editando = modo === "editar" && dadosIniciais !== undefined;
+    const basePath = `/producao/analises/${tipo}`;
 
     const [lote, setLote] = useState(
         dadosIniciais?.loteId != null ? String(dadosIniciais.loteId) : "",
@@ -71,16 +73,22 @@ export function FormularioLCC({
     const [data, setData] = useState(dadosIniciais?.data ?? hoje());
     const [hora, setHora] = useState(dadosIniciais?.hora ?? agora());
     const [viscosidade, setViscosidade] = useState(
-        texto(dadosIniciais?.viscosidade),
+        paraTexto(dadosIniciais?.viscosidade),
     );
-    const [altura, setAltura] = useState(texto(dadosIniciais?.altura));
+    const [altura, setAltura] = useState(paraTexto(dadosIniciais?.altura));
     const [temperatura, setTemperatura] = useState(
-        texto(dadosIniciais?.temperatura),
+        paraTexto(dadosIniciais?.temperatura),
+    );
+
+    const [rascunhoId, setRascunhoId] = useState<number | null>(
+        dadosIniciais?.id ?? null,
     );
     const [enviando, setEnviando] = useState(false);
     const [erro, setErro] = useState<string | null>(null);
 
     const semVinculo = usuario.cdUsrTopManager === null;
+    const podeRascunhar =
+        Boolean(lote) && Boolean(origem) && Boolean(data) && !semVinculo;
 
     // Preview do resultado, exatamente como o banco vai calcular
     const resultadoPrevisto = useMemo(
@@ -88,7 +96,29 @@ export function FormularioLCC({
         [altura, temperatura],
     );
 
-    async function handleSubmit(e: FormEvent<HTMLFormElement>) {
+    const { salvando, ultimoSalvo, cancelar } = useRascunho({
+        habilitado: podeRascunhar && !editando && !enviando,
+        dados: { lote, origem, data, hora, viscosidade, altura, temperatura },
+        idAtual: rascunhoId,
+        salvar: async (d, id) => {
+            const r = await salvarAnaliseLCC({
+                id: id ?? undefined,
+                status: "rascunho",
+                data: d.data,
+                hora: d.hora || undefined,
+                responsavelCdUsr: usuario.cdUsrTopManager as number,
+                loteId: Number(d.lote),
+                origemId: Number(d.origem),
+                viscosidade: paraNumero(d.viscosidade),
+                altura: paraNumero(d.altura),
+                temperatura: paraNumero(d.temperatura),
+            });
+            return r.ok ? { ok: true, id: r.id } : { ok: false, erro: r.erro };
+        },
+        onId: setRascunhoId,
+    });
+
+    function handleSubmit(e: FormEvent<HTMLFormElement>) {
         e.preventDefault();
         setErro(null);
 
@@ -97,10 +127,16 @@ export function FormularioLCC({
         if (!data) return setErro("Informe a data da análise.");
         if (semVinculo) return setErro("Usuário sem vínculo com o TopManager.");
 
+        confirmacao.open();
+    }
+
+    async function confirmarSalvar() {
+        cancelar();
         setEnviando(true);
         try {
             const input: SalvarAnaliseLCCInput = {
-                id: editando ? dadosIniciais.id : undefined,
+                id: rascunhoId ?? undefined,
+                status: "concluida",
                 data,
                 hora: hora || undefined,
                 responsavelCdUsr: usuario.cdUsrTopManager as number,
@@ -113,10 +149,13 @@ export function FormularioLCC({
 
             const r = await salvarAnaliseLCC(input);
             if (!r.ok) {
+                confirmacao.close();
                 setErro(r.erro);
                 return;
             }
-            router.push(`/producao/analises/LCC/${r.id}`);
+
+            router.push(basePath);
+            router.refresh();
         } finally {
             setEnviando(false);
         }
@@ -130,27 +169,74 @@ export function FormularioLCC({
         setViscosidade("");
         setAltura("");
         setTemperatura("");
+        setRascunhoId(null);
         setErro(null);
     }
 
-    const campo =
-        "w-full rounded-lg border border-border bg-surface-secondary px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/30";
+    const resumo = [
+        {
+            label: "Lote",
+            valor: lotes.find((l) => l.valor === lote)?.rotulo ?? "—",
+        },
+        {
+            label: "Origem",
+            valor: origens.find((o) => o.valor === origem)?.rotulo ?? "—",
+        },
+        {
+            label: "Data",
+            valor: `${formatarDataBR(data)}${hora ? ` · ${hora}` : ""}`,
+        },
+        { label: "Viscosidade", valor: viscosidade || "—" },
+        { label: "Altura", valor: altura || "—" },
+        { label: "Temperatura", valor: temperatura || "—" },
+        { label: "Resultado", valor: formatarNumero(resultadoPrevisto) },
+    ];
+
+    const campoData =
+        "w-full rounded-lg border border-border bg-surface-secondary px-3 py-2 text-base outline-none focus:ring-2 focus:ring-primary/30 sm:text-sm";
 
     return (
         <div className="rounded-xl border border-border bg-surface shadow-sm">
-            <div className="border-b border-border px-6 py-4">
-                <h2 className="text-lg font-semibold text-foreground">
-                    {editando ? "Editar análise — LCC" : "Nova análise — LCC"}
-                </h2>
-                <p className="text-sm text-muted">
-                    Responsável:{" "}
-                    <span className="font-medium text-foreground">{usuario.nome}</span>
-                    {usuario.cdUsrTopManager !== null && (
-                        <span className="ml-2 rounded-full bg-accent/10 px-2 py-0.5 text-xs font-medium text-accent">
-                            CdUsr {usuario.cdUsrTopManager}
+            <div className="flex items-center gap-3 border-b border-border px-6 py-4">
+                <button
+                    aria-label="Voltar para a central"
+                    className="rounded-md p-1.5 text-muted hover:bg-surface-secondary hover:text-foreground"
+                    onClick={() => router.push(basePath)}
+                    type="button"
+                >
+                    <ArrowLeft size={18} />
+                </button>
+
+                <div className="min-w-0">
+                    <h2 className="text-lg font-semibold text-foreground">
+                        {editando ? "Editar análise — LCC" : "Nova análise — LCC"}
+                    </h2>
+                    <p className="flex flex-wrap items-center gap-2 text-sm text-muted">
+                        <span>
+                            Responsável:{" "}
+                            <span className="font-medium text-foreground">{usuario.nome}</span>
                         </span>
-                    )}
-                </p>
+                        {!editando && (
+                            <span className="inline-flex items-center gap-1 text-xs">
+                                {salvando ? (
+                                    <>
+                                        <Loader2 className="size-3 animate-spin" />
+                                        Salvando rascunho…
+                                    </>
+                                ) : ultimoSalvo ? (
+                                    `Rascunho salvo às ${ultimoSalvo.toLocaleTimeString("pt-BR", {
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                    })}`
+                                ) : podeRascunhar ? (
+                                    "Rascunho automático ativo"
+                                ) : (
+                                    ""
+                                )}
+                            </span>
+                        )}
+                    </p>
+                </div>
             </div>
 
             {semVinculo && (
@@ -172,10 +258,10 @@ export function FormularioLCC({
                             Lote *
                         </label>
                         <Combobox
-                            opcoes={lotes}
-                            valor={lote}
                             onChange={setLote}
+                            opcoes={lotes}
                             placeholder="Selecionar lote..."
+                            valor={lote}
                         />
                     </div>
                     <div>
@@ -183,10 +269,10 @@ export function FormularioLCC({
                             Origem *
                         </label>
                         <Combobox
-                            opcoes={origens}
-                            valor={origem}
                             onChange={setOrigem}
+                            opcoes={origens}
                             placeholder="Selecionar origem..."
+                            valor={origem}
                         />
                     </div>
                     <div>
@@ -194,10 +280,10 @@ export function FormularioLCC({
                             Data *
                         </label>
                         <input
-                            className={campo}
+                            className={campoData}
+                            onChange={(e) => setData(e.target.value)}
                             type="date"
                             value={data}
-                            onChange={(e) => setData(e.target.value)}
                         />
                     </div>
                     <div>
@@ -205,10 +291,10 @@ export function FormularioLCC({
                             Hora
                         </label>
                         <input
-                            className={campo}
+                            className={campoData}
+                            onChange={(e) => setHora(e.target.value)}
                             type="time"
                             value={hora}
-                            onChange={(e) => setHora(e.target.value)}
                         />
                     </div>
                 </div>
@@ -222,40 +308,19 @@ export function FormularioLCC({
                             <label className="mb-1 block text-xs font-medium text-muted">
                                 Viscosidade
                             </label>
-                            <input
-                                className={campo}
-                                inputMode="decimal"
-                                placeholder="0,00"
-                                type="text"
-                                value={viscosidade}
-                                onChange={(e) => setViscosidade(e.target.value)}
-                            />
+                            <CampoNumerico onChange={setViscosidade} value={viscosidade} />
                         </div>
                         <div>
                             <label className="mb-1 block text-xs font-medium text-muted">
                                 Altura
                             </label>
-                            <input
-                                className={campo}
-                                inputMode="decimal"
-                                placeholder="0,00"
-                                type="text"
-                                value={altura}
-                                onChange={(e) => setAltura(e.target.value)}
-                            />
+                            <CampoNumerico onChange={setAltura} value={altura} />
                         </div>
                         <div>
                             <label className="mb-1 block text-xs font-medium text-muted">
                                 Temperatura
                             </label>
-                            <input
-                                className={campo}
-                                inputMode="decimal"
-                                placeholder="0,00"
-                                type="text"
-                                value={temperatura}
-                                onChange={(e) => setTemperatura(e.target.value)}
-                            />
+                            <CampoNumerico onChange={setTemperatura} value={temperatura} />
                         </div>
                     </div>
                 </fieldset>
@@ -270,27 +335,34 @@ export function FormularioLCC({
                         </p>
                     </div>
                     <p className="text-xl font-semibold text-foreground">
-                        {formatar(resultadoPrevisto)}
+                        {formatarNumero(resultadoPrevisto)}
                     </p>
                 </div>
 
                 <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
-                    <button
-                        className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted hover:text-foreground"
-                        type="button"
-                        onClick={() => (editando ? router.back() : limpar())}
+                    <Button
+                        onPress={() => (editando ? router.push(basePath) : limpar())}
+                        variant="secondary"
                     >
                         {editando ? "Cancelar" : "Limpar"}
-                    </button>
-                    <button
-                        className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
-                        disabled={enviando || semVinculo}
+                    </Button>
+                    <Button
+                        isDisabled={enviando || semVinculo}
                         type="submit"
+                        variant="primary"
                     >
                         {enviando ? "Salvando..." : "Salvar análise"}
-                    </button>
+                    </Button>
                 </div>
             </form>
+
+            <ConfirmarSalvarModal
+                editando={editando}
+                enviando={enviando}
+                onConfirmar={confirmarSalvar}
+                resumo={resumo}
+                state={confirmacao}
+            />
         </div>
     );
 }

@@ -10,6 +10,7 @@ const service = new CioneF3PGI6Service();
 export interface SalvarAnaliseF3PGI6Input {
   /** Presente = edição; ausente = criação */
   id?: number;
+  status?: "rascunho" | "concluida";
   data: string;
   hora?: string;
   loteId: number;
@@ -44,6 +45,7 @@ export async function salvarAnaliseF3PGI6(
     if (!input.data) return { ok: false, erro: "Informe a data." };
 
     const dto = {
+      status: input.status ?? "concluida",
       data: input.data,
       hora: input.hora || undefined,
       responsavelCdUsr: usuario.cdUsrTopManager,

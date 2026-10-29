@@ -9,6 +9,7 @@ const service = new CioneF6PGI6Service();
 
 export interface SalvarAnaliseF6PGI6Input {
   id?: number;
+  status?: "rascunho" | "concluida";
   data: string;
   hora?: string;
   responsavelCdUsr: number;
@@ -32,6 +33,7 @@ export async function salvarAnaliseF6PGI6(
     await requirePermission(PERMISSIONS.ANALISES_MANAGE);
 
     const dto = {
+      status: input.status ?? "concluida",
       data: input.data,
       hora: input.hora,
       responsavelCdUsr: input.responsavelCdUsr,

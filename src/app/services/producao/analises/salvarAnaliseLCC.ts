@@ -9,6 +9,7 @@ const service = new CioneLCCService();
 
 export interface SalvarAnaliseLCCInput {
   id?: number;
+  status?: "rascunho" | "concluida";
   data: string;
   hora?: string;
   responsavelCdUsr: number;
@@ -32,6 +33,7 @@ export async function salvarAnaliseLCC(
     await requirePermission(PERMISSIONS.ANALISES_MANAGE);
 
     const dto = {
+      status: input.status ?? "concluida",
       data: input.data,
       hora: input.hora,
       responsavelCdUsr: input.responsavelCdUsr,

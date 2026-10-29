@@ -16,6 +16,7 @@ export const salvarAnaliseF3PGI6Schema = z.object({
     .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Hora inválida (use HH:mm)")
     .optional(),
   responsavelCdUsr: z.number().int().positive("Responsável inválido"),
+  status: z.enum(["rascunho", "concluida"]).optional(),
   loteId: z.number().int().positive("Selecione o lote"),
   tipoId: z.number().int().positive("Selecione o tipo"),
   t1Amendoa: medicao,

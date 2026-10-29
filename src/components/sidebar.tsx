@@ -153,46 +153,62 @@ export default function Sidebar({
   };
 
   const sidebarContent = (collapsedState: boolean) => (
-    <aside className="flex h-full w-full flex-col border-r border-white/[0.06] bg-[#0f1621] text-white transition-all duration-300 ease-in-out">
+    <aside className="flex h-full w-full flex-col border-r border-white/6 bg-[#0f1621] text-white transition-all duration-300 ease-in-out">
       {/* Header — recebe shrink-0 para nunca ser comprimido */}
       <div
-        className={`flex h-16 shrink-0 items-center border-b border-white/[0.07] ${collapsedState ? "justify-center px-2" : "gap-3 px-4"
+        className={`flex h-16 shrink-0 items-center border-b border-white/6 ${collapsedState ? "justify-center px-2" : "gap-3 px-4"
           }`}
       >
-        <div
-          className={`grid size-9 shrink-0 place-items-center rounded-lg bg-accent/15 text-sm font-bold text-white ${collapsedState ? "" : "pointer-events-none"
-            }`}
-        >
-          K
-        </div>
+        {collapsedState ? (
+          <Tooltip>
+            <Tooltip.Trigger>
+              <button
+                aria-label="Expandir menu"
+                className="relative flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent text-sm font-black tracking-tight text-white shadow-lg shadow-accent/30 transition-transform hover:scale-105 focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1621] focus-visible:outline-none"
+                onClick={() => setIsCollapsed(false)}
+                type="button"
+              >
+                K
+                {!isProduction && (
+                  <span
+                    aria-hidden="true"
+                    className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-amber-500 ring-2 ring-[#0f1621]"
+                  />
+                )}
+              </button>
+            </Tooltip.Trigger>
+            <Tooltip.Content placement="right">Expandir menu</Tooltip.Content>
+          </Tooltip>
+        ) : (
+          <>
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent text-sm font-black tracking-tight text-white shadow-lg shadow-accent/30">
+              K
+            </div>
 
-        {!collapsedState && (
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold tracking-tight text-white">
-              Kaju App
-            </p>
-            {isProduction && (
-              <p className="text-[10px] font-medium uppercase tracking-wide text-emerald-400">
-                Produção
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold leading-5 tracking-tight">
+                Kaju
               </p>
-            )}
-          </div>
+              <p className="truncate text-[11px] text-slate-500">Operações</p>
+              {!isProduction && (
+                <p className="truncate text-[11px] font-medium text-amber-500">
+                  desenvolvimento
+                </p>
+              )}
+            </div>
+
+            <Button
+              aria-label="Recolher menu"
+              className="hidden shrink-0 text-slate-500 hover:bg-white/[0.07] hover:text-slate-300 lg:flex"
+              isIconOnly
+              onPress={() => setIsCollapsed(true)}
+              variant="ghost"
+            >
+              <Menu size={19} />
+            </Button>
+          </>
         )}
 
-        {/* Desktop expandido: recolher */}
-        {!collapsedState && (
-          <Button
-            aria-label="Recolher menu"
-            className="hidden shrink-0 text-slate-500 hover:bg-white/[0.07] hover:text-slate-300 lg:flex"
-            isIconOnly
-            onPress={() => setIsCollapsed(true)}
-            variant="ghost"
-          >
-            <Menu size={19} />
-          </Button>
-        )}
-
-        {/* Mobile: fechar dentro do drawer */}
         <Button
           aria-label="Fechar menu"
           className="ml-auto shrink-0 text-slate-500 hover:bg-white/[0.07] hover:text-slate-300 lg:hidden"
@@ -221,8 +237,8 @@ export default function Sidebar({
                     <Button
                       aria-label={item.name}
                       className={`w-full ${ativo
-                        ? "bg-accent/[0.18] text-white"
-                        : "text-slate-500 hover:bg-white/[0.06] hover:text-slate-200"
+                        ? "bg-accent/18 text-white"
+                        : "text-slate-500 hover:bg-white/6 hover:text-slate-200"
                         }`}
                       isIconOnly
                       onPress={() => {
@@ -250,7 +266,7 @@ export default function Sidebar({
                   aria-expanded={aberto}
                   className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium transition-colors ${ativo
                     ? "text-white"
-                    : "text-slate-400 hover:bg-white/[0.06] hover:text-slate-200"
+                    : "text-slate-400 hover:bg-white/6 hover:text-slate-200"
                     }`}
                   onClick={() => toggleSubMenu(item.name)}
                   type="button"
@@ -271,9 +287,9 @@ export default function Sidebar({
 
                       return (
                         <Link
-                          className={`rounded-md px-3 py-[7px] text-[13px] transition-colors ${isActive
-                            ? "bg-accent/[0.18] font-semibold text-white"
-                            : "text-slate-500 hover:bg-white/[0.06] hover:text-slate-200"
+                          className={`rounded-md px-3 py-1.75 text-[13px] transition-colors ${isActive
+                            ? "bg-accent/18 font-semibold text-white"
+                            : "text-slate-500 hover:bg-white/6 hover:text-slate-200"
                             }`}
                           href={subItem.href}
                           key={subItem.name}
@@ -349,14 +365,14 @@ export default function Sidebar({
 
       {/* Drawer — h-dvh desconta a barra do navegador no mobile */}
       <div
-        className={`fixed top-0 left-0 z-40 h-dvh w-[264px] overscroll-contain transition-transform duration-300 ease-in-out lg:hidden ${isMobileOpen ? "translate-x-0" : "-translate-x-full"
+        className={`fixed top-0 left-0 z-40 h-dvh w-66 overscroll-contain transition-transform duration-300 ease-in-out lg:hidden ${isMobileOpen ? "translate-x-0" : "-translate-x-full"
           }`}
       >
         {sidebarContent(false)}
       </div>
 
       <div
-        className={`sticky top-0 hidden h-screen shrink-0 transition-all duration-300 ease-in-out lg:block ${isCollapsed ? "w-[76px]" : "w-[264px]"
+        className={`sticky top-0 hidden h-screen shrink-0 transition-all duration-300 ease-in-out lg:block ${isCollapsed ? "w-19" : "w-66"
           }`}
       >
         {sidebarContent(isCollapsed)}

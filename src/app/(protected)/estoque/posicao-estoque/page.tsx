@@ -61,11 +61,10 @@ function TotalCells({
       </td>
       <td className="px-4 py-2 text-center">
         <span
-          className={`inline-flex min-w-16 justify-center rounded-md border px-2 py-0.5 text-xs font-semibold ${
-            totals.available < 0
+          className={`inline-flex min-w-16 justify-center rounded-md border px-2 py-0.5 text-xs font-semibold ${totals.available < 0
               ? "border-red-200/60 bg-red-50/60 text-red-600"
               : "border-emerald-200/60 bg-emerald-50/60 text-emerald-600"
-          }`}
+            }`}
         >
           {formatQuantity(totals.available)}
         </span>
@@ -262,7 +261,7 @@ export default function StockPositionPage() {
 
       <FilterBar className="flex flex-wrap items-end gap-4">
         <SearchField
-          className="w-full flex-1 sm:min-w-[240px]"
+          className="w-full flex-1 sm:min-w-60"
           name="search"
           value={searchQuery}
           onChange={setSearchQuery}
@@ -324,7 +323,7 @@ export default function StockPositionPage() {
         </div>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-border bg-surface">
-          <table className="w-full min-w-[700px] text-sm">
+          <table className="w-full min-w-175 text-sm">
             <thead>
               <tr className="border-b border-border bg-surface-secondary/50">
                 <th className="px-4 py-3 text-left font-semibold text-xs uppercase tracking-wide text-muted">
@@ -430,11 +429,10 @@ export default function StockPositionPage() {
                                   </td>
                                   <td className="px-4 py-2.5 text-center">
                                     <span
-                                      className={`inline-flex min-w-16 justify-center rounded-md border px-2 py-0.5 text-xs font-semibold ${
-                                        item.available < 0
+                                      className={`inline-flex min-w-16 justify-center rounded-md border px-2 py-0.5 text-xs font-semibold ${item.available < 0
                                           ? "border-red-200 bg-red-50 text-red-700"
                                           : "border-emerald-200 bg-emerald-50 text-emerald-700"
-                                      }`}
+                                        }`}
                                     >
                                       {formatQuantity(item.available)}
                                     </span>

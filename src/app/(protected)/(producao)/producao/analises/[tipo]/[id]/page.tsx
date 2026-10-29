@@ -72,7 +72,7 @@ export default async function DetalheAnalisePage({
             </div>
 
             <Link
-                className="inline-flex items-center gap-2 rounded-md border border-border px-4 py-2 text-sm font-medium text-muted hover:text-foreground"
+                className="inline-flex items-center gap-2 rounded-md border border-border bg-surface px-4 py-2 text-sm font-medium text-muted hover:text-foreground"
                 href={`/producao/analises/${tipo}`}
             >
                 <ArrowLeft size={16} />

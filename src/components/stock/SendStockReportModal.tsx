@@ -237,7 +237,7 @@ export function SendStockReportModal({
                     Destinatários
                   </Label>
                   <div
-                    className="flex min-h-[42px] flex-wrap gap-1.5 rounded-md border border-border bg-surface-secondary px-3 py-2 focus-within:ring-2 focus-within:ring-primary/30"
+                    className="flex min-h-10.5 flex-wrap gap-1.5 rounded-md border border-border bg-surface-secondary px-3 py-2 focus-within:ring-2 focus-within:ring-primary/30"
                     onClick={() => inputRef.current?.focus()}
                   >
                     {recipients.map((email) => (
@@ -253,7 +253,7 @@ export function SendStockReportModal({
                     ))}
                     <input
                       ref={inputRef}
-                      className="min-w-[160px] flex-1 bg-transparent text-sm outline-none placeholder:text-muted"
+                      className="min-w-40 flex-1 bg-transparent text-sm outline-none placeholder:text-muted"
                       onBlur={handleInputBlur}
                       onChange={(e) => setInputValue(e.target.value)}
                       onKeyDown={handleInputKeyDown}

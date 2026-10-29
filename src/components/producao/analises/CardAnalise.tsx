@@ -15,6 +15,11 @@ export function CardAnalise({
     return (
         <article className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-5 shadow-sm transition-shadow hover:shadow-md">
             <div className="min-w-0">
+                {item.status === "rascunho" && (
+                    <span className="mt-1 inline-block rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
+                        Rascunho
+                    </span>
+                )}
                 <p className="text-xs font-semibold uppercase tracking-wide text-accent">
                     Análise #{item.id}
                 </p>

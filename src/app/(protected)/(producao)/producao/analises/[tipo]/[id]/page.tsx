@@ -43,7 +43,7 @@ export default async function DetalheAnalisePage({
                 </Link>
             </div>
 
-            <div className="rounded-lg border border-border p-4">
+            <div className="rounded-lg border border-border bg-surface p-4 shadow-sm">
                 <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">Identificação</p>
                 <dl className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
                     {detalhe.identificacao.map((i) => (
@@ -57,7 +57,7 @@ export default async function DetalheAnalisePage({
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 {detalhe.grupos.map((g) => (
-                    <div className="rounded-lg border border-border p-4" key={g.titulo}>
+                    <div className="rounded-lg border border-border bg-surface p-4 shadow-sm" key={g.titulo}>
                         <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">{g.titulo}</p>
                         <dl className="grid grid-cols-2 gap-3">
                             {g.itens.map((i) => (

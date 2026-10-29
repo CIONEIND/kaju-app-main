@@ -18,7 +18,7 @@ const OURO = "#B08D57";
 
 /* ── Assets em public/timbrado/ ──────────────────────────── */
 const CABECALHO = "/timbrado/cione-arvore.png";
-const LOGO = "/timbrado/cione-logo2.png";
+const LOGO = "/timbrado/cione-logo.png";
 const MARCA_DAGUA = "/timbrado/jangada-marca.png";
 
 /* ── Calibragem em pontos (1pt = 1,333px da prévia) ──────── */

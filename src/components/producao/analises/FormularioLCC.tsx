@@ -85,6 +85,8 @@ export function FormularioLCC({
     );
     const [enviando, setEnviando] = useState(false);
     const [erro, setErro] = useState<string | null>(null);
+    const [sucessoConfirmacao, setSucessoConfirmacao] = useState(false);
+    const [erroConfirmacao, setErroConfirmacao] = useState<string | null>(null);
 
     const semVinculo = usuario.cdUsrTopManager === null;
     const podeRascunhar =
@@ -127,12 +129,15 @@ export function FormularioLCC({
         if (!data) return setErro("Informe a data da análise.");
         if (semVinculo) return setErro("Usuário sem vínculo com o TopManager.");
 
+        setErroConfirmacao(null);
+        setSucessoConfirmacao(false);
         confirmacao.open();
     }
 
     async function confirmarSalvar() {
         cancelar();
         setEnviando(true);
+        setErroConfirmacao(null);
         try {
             const input: SalvarAnaliseLCCInput = {
                 id: rascunhoId ?? undefined,
@@ -149,13 +154,19 @@ export function FormularioLCC({
 
             const r = await salvarAnaliseLCC(input);
             if (!r.ok) {
-                confirmacao.close();
-                setErro(r.erro);
+                setErroConfirmacao(r.erro);
                 return;
             }
 
-            router.push(basePath);
-            router.refresh();
+            setTimeout(() => {
+                confirmacao.close();
+                router.push(basePath);
+                router.refresh();
+            }, 900);
+        } catch (e) {
+            setErroConfirmacao(
+                e instanceof Error ? e.message : "Erro ao salvar a análise.",
+            );
         } finally {
             setEnviando(false);
         }
@@ -359,6 +370,8 @@ export function FormularioLCC({
             <ConfirmarSalvarModal
                 editando={editando}
                 enviando={enviando}
+                erro={erroConfirmacao}
+                sucesso={sucessoConfirmacao}
                 onConfirmar={confirmarSalvar}
                 resumo={resumo}
                 state={confirmacao}

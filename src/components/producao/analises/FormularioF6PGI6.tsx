@@ -61,6 +61,8 @@ export function FormularioF6PGI6({
     );
     const [data, setData] = useState(dadosIniciais?.data ?? hoje());
     const [hora, setHora] = useState(dadosIniciais?.hora ?? agora());
+    const [sucessoConfirmacao, setSucessoConfirmacao] = useState(false);
+    const [erroConfirmacao, setErroConfirmacao] = useState<string | null>(null);
 
     const [medicoes, setMedicoes] = useState<Medicoes>({
         cubagem: paraTexto(dadosIniciais?.cubagem),
@@ -109,12 +111,15 @@ export function FormularioF6PGI6({
         if (!data) return setErro("Informe a data da análise.");
         if (semVinculo) return setErro("Usuário sem vínculo com o TopManager.");
 
+        setErroConfirmacao(null);
+        setSucessoConfirmacao(false);
         confirmacao.open();
     }
 
     async function confirmarSalvar() {
         cancelar();
         setEnviando(true);
+        setErroConfirmacao(null);
         try {
             const input: SalvarAnaliseF6PGI6Input = {
                 id: rascunhoId ?? undefined,
@@ -131,13 +136,21 @@ export function FormularioF6PGI6({
 
             const r = await salvarAnaliseF6PGI6(input);
             if (!r.ok) {
-                confirmacao.close();
                 setErro(r.erro);
                 return;
             }
 
-            router.push(basePath);
-            router.refresh();
+            setSucessoConfirmacao(true);    // mostra o check verde
+
+            setTimeout(() => {
+                confirmacao.close();
+                router.push(basePath);
+                router.refresh();
+            }, 900);
+        } catch (e) {
+            setErroConfirmacao(
+                e instanceof Error ? e.message : "Erro ao salvar a análise.",
+            );
         } finally {
             setEnviando(false);
         }
@@ -339,6 +352,8 @@ export function FormularioF6PGI6({
             <ConfirmarSalvarModal
                 editando={editando}
                 enviando={enviando}
+                erro={erroConfirmacao}
+                sucesso={sucessoConfirmacao}
                 onConfirmar={confirmarSalvar}
                 resumo={resumo}
                 state={confirmacao}

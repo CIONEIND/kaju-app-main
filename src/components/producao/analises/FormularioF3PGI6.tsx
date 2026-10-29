@@ -138,6 +138,8 @@ export function FormularioF3PGI6({
     );
     const [data, setData] = useState(dadosIniciais?.data ?? hoje());
     const [hora, setHora] = useState(dadosIniciais?.hora ?? agora());
+    const [sucessoConfirmacao, setSucessoConfirmacao] = useState(false);
+    const [erroConfirmacao, setErroConfirmacao] = useState<string | null>(null);
 
     const [medicoes, setMedicoes] = useState<Medicoes>({
         t1Amendoa: paraTexto(dadosIniciais?.t1Amendoa),
@@ -204,12 +206,17 @@ export function FormularioF3PGI6({
             return setErro("Informe ao menos uma medição (amêndoa ou casca).");
         }
 
+        // limpa o estado da tentativa anterior antes de reabrir
+        setErroConfirmacao(null);
+        setSucessoConfirmacao(false);
         confirmacao.open();
     }
 
     async function confirmarSalvar() {
-        cancelar();
+        cancelar(); // evita corrida com o autosave do rascunho
         setEnviando(true);
+        setErroConfirmacao(null);
+
         try {
             const input: SalvarAnaliseF3PGI6Input = {
                 id: rascunhoId ?? undefined,
@@ -227,14 +234,25 @@ export function FormularioF3PGI6({
             };
 
             const resultado = await salvarAnaliseF3PGI6(input);
+
             if (!resultado.ok) {
-                confirmacao.close();
-                setErro(resultado.erro);
+                // modal permanece aberto, com a mensagem em vermelho
+                setErroConfirmacao(resultado.erro);
                 return;
             }
 
-            router.push(basePath);
-            router.refresh();
+            // mostra o check verde por um instante
+            setSucessoConfirmacao(true);
+
+            setTimeout(() => {
+                confirmacao.close();
+                router.push(basePath);
+                router.refresh();
+            }, 900);
+        } catch (e) {
+            setErroConfirmacao(
+                e instanceof Error ? e.message : "Erro ao salvar a análise.",
+            );
         } finally {
             setEnviando(false);
         }

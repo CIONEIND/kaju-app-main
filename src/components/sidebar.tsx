@@ -30,19 +30,15 @@ type SubItem = {
 
 type MenuItem = {
   name: string;
-  icon: typeof LayoutDashboard;
-  subItems: SubItem[];
-  /**
-   * Permissão do grupo inteiro — some com o item e todos os sub-itens.
-   * Espelha o gate do `layout.tsx` da área, que vale para as rotas aninhadas.
-   */
+  icon: React.ComponentType<{ size?: number; className?: string }>;
   requiresPermission?: string;
+  subItems: SubItem[];
 };
 
-interface SidebarProps {
+type SidebarProps = {
   permissions?: string[];
   isProduction?: boolean;
-}
+};
 
 const menuItems: MenuItem[] = [
   {
@@ -120,7 +116,6 @@ export default function Sidebar({
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({});
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
-  // Fecha o menu mobile automaticamente ao navegar de página
   useEffect(() => {
     setIsMobileOpen(false);
   }, [pathname]);
@@ -157,94 +152,120 @@ export default function Sidebar({
     if (isCollapsed) setIsCollapsed(false);
   };
 
-  // Conteúdo isolado do menu para reuso tanto no mobile quanto desktop
   const sidebarContent = (collapsedState: boolean) => (
-    <aside
-      className={`flex h-full w-full flex-col border-r border-white/[0.06] bg-[#0f1621] text-white transition-all duration-300 ease-in-out`}
-    >
-      <div className="flex h-16 items-center gap-3 border-b border-white/[0.07] px-4">
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent text-sm font-black tracking-tight text-white shadow-lg shadow-accent/30">
+    <aside className="flex h-full w-full flex-col border-r border-white/[0.06] bg-[#0f1621] text-white transition-all duration-300 ease-in-out">
+      {/* Header — recebe shrink-0 para nunca ser comprimido */}
+      <div
+        className={`flex h-16 shrink-0 items-center border-b border-white/[0.07] ${collapsedState ? "justify-center px-2" : "gap-3 px-4"
+          }`}
+      >
+        <div
+          className={`grid size-9 shrink-0 place-items-center rounded-lg bg-accent/15 text-sm font-bold text-white ${collapsedState ? "" : "pointer-events-none"
+            }`}
+        >
           K
         </div>
+
         {!collapsedState && (
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold leading-5 tracking-tight">
-              Kaju
+            <p className="truncate text-sm font-semibold tracking-tight text-white">
+              Kaju App
             </p>
-            <p className="truncate text-[11px] text-slate-500"> Operações</p>
-            {!isProduction && (
-              <p className="truncate text-[11px] font-medium text-amber-500">
-                desenvolvimento
+            {isProduction && (
+              <p className="text-[10px] font-medium uppercase tracking-wide text-emerald-400">
+                Produção
               </p>
             )}
           </div>
         )}
 
-        {/* Botão de recolher visível apenas no Desktop */}
+        {/* Desktop expandido: recolher */}
+        {!collapsedState && (
+          <Button
+            aria-label="Recolher menu"
+            className="hidden shrink-0 text-slate-500 hover:bg-white/[0.07] hover:text-slate-300 lg:flex"
+            isIconOnly
+            onPress={() => setIsCollapsed(true)}
+            variant="ghost"
+          >
+            <Menu size={19} />
+          </Button>
+        )}
+
+        {/* Mobile: fechar dentro do drawer */}
         <Button
-          aria-label={collapsedState ? "Expandir menu" : "Recolher menu"}
-          className={`hidden lg:flex text-slate-500 hover:bg-white/[0.07] hover:text-slate-300 ${collapsedState ? "mx-auto" : "ml-auto"
-            }`}
+          aria-label="Fechar menu"
+          className="ml-auto shrink-0 text-slate-500 hover:bg-white/[0.07] hover:text-slate-300 lg:hidden"
           isIconOnly
-          onPress={() => setIsCollapsed(!isCollapsed)}
+          onPress={() => setIsMobileOpen(false)}
           variant="ghost"
         >
-          <Menu size={19} />
+          <X size={18} />
         </Button>
       </div>
 
-      <ScrollShadow className="flex-1 overflow-x-hidden px-2 py-3">
+      {/* A rolagem precisa de min-h-0 para não estourar o flex-col */}
+      <ScrollShadow className="min-h-0 flex-1 overflow-x-hidden px-2 py-3">
         <nav className="flex flex-col gap-2">
           {visibleItems.map((item) => {
-            const isOpen = expandedMenus[item.name];
-            const hasActiveChild = item.subItems.some((subItem) =>
+            const Icone = item.icon;
+            const aberto = expandedMenus[item.name];
+            const ativo = item.subItems.some((subItem) =>
               isActivePath(pathname, subItem.href),
             );
 
-            return (
-              <div className="flex flex-col gap-1" key={item.name}>
-                {collapsedState ? (
-                  <Tooltip>
-                    <Tooltip.Trigger>
-                      <Button
-                        aria-label={item.name}
-                        className={`w-full text-slate-400 hover:bg-white/[0.07] hover:text-slate-200 ${hasActiveChild ? "bg-white/[0.09] text-white" : ""
-                          }`}
-                        isIconOnly
-                        onPress={() => toggleSubMenu(item.name)}
-                        variant="ghost"
-                      >
-                        <item.icon size={20} />
-                      </Button>
-                    </Tooltip.Trigger>
-                    <Tooltip.Content placement="right">
-                      {item.name}
-                    </Tooltip.Content>
-                  </Tooltip>
-                ) : (
-                  <Button
-                    className={`h-10 w-full justify-between rounded-lg px-3 font-medium text-slate-400 hover:bg-white/[0.07] hover:text-slate-200 ${hasActiveChild ? "bg-white/[0.09] text-slate-200" : ""
-                      }`}
-                    onPress={() => toggleSubMenu(item.name)}
-                    variant="ghost"
-                  >
-                    <span className="flex items-center gap-2.5">
-                      <item.icon
-                        className="shrink-0 text-slate-500"
-                        size={17}
-                      />
-                      <span className="text-[13px]">{item.name}</span>
-                    </span>
-                    {isOpen ? (
-                      <ChevronDown size={16} />
-                    ) : (
-                      <ChevronRight size={16} />
-                    )}
-                  </Button>
-                )}
+            if (collapsedState) {
+              return (
+                <Tooltip key={item.name}>
+                  <Tooltip.Trigger>
+                    <Button
+                      aria-label={item.name}
+                      className={`w-full ${ativo
+                        ? "bg-accent/[0.18] text-white"
+                        : "text-slate-500 hover:bg-white/[0.06] hover:text-slate-200"
+                        }`}
+                      isIconOnly
+                      onPress={() => {
+                        setIsCollapsed(false);
+                        setOpenMenus((prev) => ({
+                          ...prev,
+                          [item.name]: true,
+                        }));
+                      }}
+                      variant="ghost"
+                    >
+                      <Icone size={18} />
+                    </Button>
+                  </Tooltip.Trigger>
+                  <Tooltip.Content placement="right">
+                    {item.name}
+                  </Tooltip.Content>
+                </Tooltip>
+              );
+            }
 
-                {!collapsedState && isOpen && (
-                  <div className="ml-3 flex flex-col gap-0.5 border-l border-white/[0.07] pl-3">
+            return (
+              <div key={item.name}>
+                <button
+                  aria-expanded={aberto}
+                  className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium transition-colors ${ativo
+                    ? "text-white"
+                    : "text-slate-400 hover:bg-white/[0.06] hover:text-slate-200"
+                    }`}
+                  onClick={() => toggleSubMenu(item.name)}
+                  type="button"
+                >
+                  <Icone className="shrink-0" size={18} />
+                  <span className="flex-1 truncate text-left">{item.name}</span>
+                  {aberto ? (
+                    <ChevronDown className="shrink-0" size={15} />
+                  ) : (
+                    <ChevronRight className="shrink-0" size={15} />
+                  )}
+                </button>
+
+                {aberto && (
+                  <div className="mt-1 ml-4 flex flex-col gap-0.5 border-l border-white/[0.07] pl-2">
                     {item.subItems.map((subItem) => {
                       const isActive = isActivePath(pathname, subItem.href);
 
@@ -269,7 +290,8 @@ export default function Sidebar({
         </nav>
       </ScrollShadow>
 
-      <div className="border-t border-white/[0.07] p-2">
+      {/* Footer — shrink-0 + safe area para o rodapé do iPhone */}
+      <div className="shrink-0 border-t border-white/[0.07] p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
         {collapsedState ? (
           <Tooltip>
             <Tooltip.Trigger>
@@ -306,35 +328,35 @@ export default function Sidebar({
 
   return (
     <>
-      {/* Botão Hambúrguer — Mobile */}
-      <Button
-        aria-label="Abrir menu"
-        className="fixed top-3 left-3 z-50 bg-[#0f1621] text-white shadow-lg border border-white/10 lg:hidden"
-        isIconOnly
-        onPress={() => setIsMobileOpen((prev) => !prev)}
-      >
-        {isMobileOpen ? <X size={20} /> : <Menu size={20} />}
-      </Button>
+      {/* Hambúrguer — só existe quando o drawer está fechado */}
+      {!isMobileOpen && (
+        <Button
+          aria-label="Abrir menu"
+          className="fixed top-3 left-3 z-50 border border-white/10 bg-[#0f1621] text-white shadow-lg lg:hidden"
+          isIconOnly
+          onPress={() => setIsMobileOpen(true)}
+        >
+          <Menu size={20} />
+        </Button>
+      )}
 
-      {/* Overlay Escuro para Mobile */}
       {isMobileOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden transition-opacity"
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm transition-opacity lg:hidden"
           onClick={() => setIsMobileOpen(false)}
         />
       )}
 
-      {/* Sidebar — Mobile (Drawer Deslizante) */}
+      {/* Drawer — h-dvh desconta a barra do navegador no mobile */}
       <div
-        className={`fixed top-0 left-0 z-40 h-screen w-[264px] transition-transform duration-300 ease-in-out lg:hidden ${isMobileOpen ? "translate-x-0" : "-translate-x-full"
+        className={`fixed top-0 left-0 z-40 h-dvh w-[264px] overscroll-contain transition-transform duration-300 ease-in-out lg:hidden ${isMobileOpen ? "translate-x-0" : "-translate-x-full"
           }`}
       >
         {sidebarContent(false)}
       </div>
 
-      {/* Sidebar — Desktop (Layout Normal Fixo/Sticky) */}
       <div
-        className={`hidden lg:block h-screen shrink-0 sticky top-0 transition-all duration-300 ease-in-out ${isCollapsed ? "w-[76px]" : "w-[264px]"
+        className={`sticky top-0 hidden h-screen shrink-0 transition-all duration-300 ease-in-out lg:block ${isCollapsed ? "w-[76px]" : "w-[264px]"
           }`}
       >
         {sidebarContent(isCollapsed)}

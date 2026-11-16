@@ -21,9 +21,13 @@ const ROOT = join(import.meta.dirname, "..");
 const UF_CSV = join(ROOT, "unidades-federativas.csv");
 const MUNICIPIO_CSV = join(ROOT, "municipios.csv");
 
-const connectionString =
-  process.env.DATABASE_URL ??
-  "postgresql://postgres:postgres@localhost:5432/kaju";
+const connectionString = process.env.DATABASE_URL;
+if (!connectionString) {
+  console.error(
+    "❌ DATABASE_URL não definido. Defina a variável (do banco alvo) antes de rodar o seed.",
+  );
+  process.exit(1);
+}
 
 const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString }),

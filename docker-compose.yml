@@ -2,10 +2,11 @@ name: kaju-dev
 
 services:
   postgres:
-    #image: postgres:17-alpine
     image: postgres:17.4
     container_name: kaju-dev-postgres
     restart: unless-stopped
+    ports:
+      - "0.0.0.0:5433:5432"
     env_file:
       - ./.env
     volumes:
@@ -16,5 +17,5 @@ services:
       timeout: 5s
       retries: 5
 
-networks:
+volumes:
   pgdata:

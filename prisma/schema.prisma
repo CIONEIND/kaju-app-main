@@ -261,3 +261,59 @@ model Municipio {
 
   @@schema("public")
 }
+
+// Tipo de silo conforme a memória de cálculo (abas Silos I a VII).
+enum TipoSilo {
+  I
+  II
+  III
+  IV
+  V
+  VI
+  VII
+
+  @@schema("public")
+}
+
+/// Geometria do silo, versionada por vigência.
+/// Cada mudança estrutural (reforma) cria uma linha nova em vez de
+/// sobrescrever, preservando o cálculo histórico.
+model ParametroSilo {
+  id             String    @id @default(cuid())
+  /// CdObj do silo no TopManager (TbObj, filhos de CdObjMae 53115)
+  siloCdObj      Int
+  tipoSilo       TipoSilo
+  vigenciaInicio DateTime
+  /// null = vigente
+  vigenciaFim    DateTime?
+  alturaUtil     Decimal   @db.Decimal(5, 2)
+  diametro       Decimal   @db.Decimal(5, 3)
+  areaBaseMaior  Decimal   @db.Decimal(12, 9)
+  areaBaseMenor  Decimal   @db.Decimal(12, 11)
+  alturaTronco   Decimal   @db.Decimal(5, 3)
+  motivo         String?
+  criadoPor      String
+  criadoEm       DateTime  @default(now())
+
+  @@index([siloCdObj, vigenciaInicio])
+  @@index([siloCdObj, vigenciaFim])
+  @@schema("public")
+}
+
+/// Peso específico de repouso por tipo de análise e safra.
+model PesoEspecifico {
+  id               String    @id @default(cuid())
+  /// CdObj do tipo de análise no TopManager
+  tipoAnaliseCdObj Int
+  safra            String
+  vigenciaInicio   DateTime
+  /// null = vigente
+  vigenciaFim      DateTime?
+  valorKgM3        Decimal   @db.Decimal(8, 2)
+  observacao       String?
+  criadoEm         DateTime  @default(now())
+
+  @@index([tipoAnaliseCdObj, vigenciaInicio])
+  @@index([tipoAnaliseCdObj, vigenciaFim])
+  @@schema("public")
+}

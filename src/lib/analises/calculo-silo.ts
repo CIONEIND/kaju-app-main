@@ -34,20 +34,22 @@ export interface ResultadoCalculo {
   lotacao: number;
 }
 
+export type CodigoErroCalculo =
+  | "ACIMA_AREA_UTIL"
+  | "NEGATIVO"
+  | "CASAS_DECIMAIS";
+
 export class ErroCalculoSilo extends Error {
   constructor(
     message: string,
-    public readonly codigo:
-      | "ACIMA_AREA_UTIL"
-      | "NEGATIVO"
-      | "CASAS_DECIMAIS",
+    public readonly codigo: CodigoErroCalculo,
   ) {
     super(message);
     this.name = "ErroCalculoSilo";
   }
 }
 
-/** VTC a partir da geometria — tronco de cone completo */
+/** VTC — tronco de cone completo: (A1 + √(A1·A2) + A2) / 3 × x */
 export function calcularVolumeTronco(g: GeometriaSilo): number {
   const raiz = Math.sqrt(g.areaBaseMaior * g.areaBaseMenor);
   return ((g.areaBaseMaior + raiz + g.areaBaseMenor) / 3) * g.alturaTronco;
@@ -78,6 +80,7 @@ export function calcularVazio(
   if (!Number.isFinite(vazio)) {
     throw new ErroCalculoSilo("Valor medido inválido.", "NEGATIVO");
   }
+
   if (vazio < 0) {
     throw new ErroCalculoSilo(
       modo === "vazio"
@@ -86,6 +89,7 @@ export function calcularVazio(
       "NEGATIVO",
     );
   }
+
   if (vazio > alturaUtil) {
     throw new ErroCalculoSilo(
       `O nível não pode ultrapassar a área útil do silo (${alturaUtil} m).`,
@@ -100,6 +104,7 @@ export function calcularLeitura(entrada: EntradaCalculo): ResultadoCalculo {
   const { geometria, valorMedido, modo, pesoEspecifico } = entrada;
 
   validarCasasDecimais(valorMedido);
+
   const vazio = calcularVazio(geometria, valorMedido, modo);
   const alturaGrao = geometria.alturaUtil - vazio;
 

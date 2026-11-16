@@ -13,7 +13,6 @@ import type {
   DetalheAnalise,
   FiltroCentral,
   ResultadoCentral,
-  StatusAnalise,
 } from "@/lib/analises/tipos";
 
 const service = new CioneF6PGI6Service();
@@ -37,9 +36,11 @@ export async function consultarCentralF6PGI6(
     filtro,
     usuario.cdUsrTopManager,
   );
+
   const combo = (lista: { cdObj: number; nome: string }[]) =>
     lista.map((i) => ({ valor: String(i.cdObj), rotulo: i.nome }));
-  // Resumo nunca mistura rascunho: em "rascunhos" ele é omitido
+
+  /* Resumo nunca mistura rascunho: em "rascunhos" ele é omitido */
   const [analises, total, lotes, tipos, silos, resumo] = await Promise.all([
     service.listar(f),
     service.contar(f),
@@ -50,6 +51,14 @@ export async function consultarCentralF6PGI6(
       ? Promise.resolve([])
       : service.resumo({ ...f, status: "concluida" }),
   ]);
+
+  /* Período efetivamente aplicado — a UI mostra isso ao usuário */
+  const periodo =
+    status === "rascunho"
+      ? "Todos os rascunhos"
+      : f.dtInicial === f.dtFinal
+        ? formatarDataBR(f.dtInicial ?? "")
+        : `${formatarDataBR(f.dtInicial ?? "")} a ${formatarDataBR(f.dtFinal ?? "")}`;
 
   return {
     itens: analises.map((a) => ({
@@ -66,8 +75,10 @@ export async function consultarCentralF6PGI6(
         { label: "Responsável", valor: a.responsavelNome ?? "—" },
       ],
       metricas: [
-        { label: "Cubagem", valor: num(a.cubagem) },
-        { label: "Consumo", valor: num(a.consumo) },
+        { label: "Vazio inicial", valor: num(a.vazioInicial) },
+        { label: "Vazio final", valor: num(a.vazioFinal) },
+        { label: "Volume consumido (m³)", valor: num(a.volumeConsumido) },
+        { label: "Peso consumido (kg)", valor: num(a.pesoConsumido) },
       ],
     })),
     total,
@@ -76,12 +87,14 @@ export async function consultarCentralF6PGI6(
     silos: combo(silos),
     origens: [],
     status,
+    periodo,
     resumos: resumo.slice(0, 6).map((r) => ({
       label: `${r.tipoNome ?? "—"} · ${r.loteNome ?? "—"}`,
       valor: `${num(r.consumototal)} (${r.qtdSilos} silos)`,
     })),
   };
 }
+
 export async function carregarF6PGI6(id: number): Promise<DetalheAnalise | null> {
   const usuario = await getUsuarioAtual();
   if (!usuario) throw new Error("Sessão expirada.");
@@ -90,7 +103,7 @@ export async function carregarF6PGI6(id: number): Promise<DetalheAnalise | null>
   const a = await service.buscarPorId(id);
   if (!a) return null;
 
-  // Rascunho de outra pessoa não é acessível
+  /* Rascunho de outra pessoa não é acessível: 0 = rascunho */
   if (a.status === 0 && a.responsavelCdUsr !== usuario.cdUsrTopManager) {
     return null;
   }
@@ -104,25 +117,48 @@ export async function carregarF6PGI6(id: number): Promise<DetalheAnalise | null>
       { label: "Tipo", valor: a.tipoNome ?? "—" },
       { label: "Silo", valor: a.siloNome ?? "—" },
       { label: "Responsável", valor: a.responsavelNome ?? "—" },
+      {
+        label: "Modo de medição",
+        valor: a.modoMedicao === "produto" ? "Produto" : "Vazio",
+      },
     ],
     grupos: [
       {
-        titulo: "Medições",
+        titulo: "Leituras",
         itens: [
-          { label: "Cubagem", valor: num(a.cubagem) },
-          { label: "Consumo", valor: num(a.consumo) },
+          { label: "Vazio inicial (m)", valor: num(a.vazioInicial) },
+          { label: "Vazio final (m)", valor: num(a.vazioFinal) },
+        ],
+      },
+      {
+        titulo: "Volumes",
+        itens: [
+          { label: "Volume inicial (m³)", valor: num(a.volumeInicial) },
+          { label: "Volume final (m³)", valor: num(a.volumeFinal) },
+          { label: "Volume consumido (m³)", valor: num(a.volumeConsumido) },
+        ],
+      },
+      {
+        titulo: "Pesos",
+        itens: [
+          { label: "Peso inicial (kg)", valor: num(a.pesoInicial) },
+          { label: "Peso final (kg)", valor: num(a.pesoFinal) },
+          { label: "Peso consumido (kg)", valor: num(a.pesoConsumido) },
         ],
       },
     ],
     dadosIniciais: {
       id: a.id,
-      data: a.data,          // ISO — o type="date" exige
+      data: a.data,
       hora: a.hora,
       loteId: a.loteId,
       tipoId: a.tipoId,
       siloId: a.siloId,
-      cubagem: a.cubagem,
-      consumo: a.consumo,
+      modoMedicao: a.modoMedicao,
+      competencia: a.competencia ?? undefined,
+      vazioInicial: a.vazioInicial,
+      vazioFinal: a.vazioFinal,
+      status: statusDoCard(a.status),
     },
   };
-}
+} 

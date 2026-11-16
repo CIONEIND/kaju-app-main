@@ -13,7 +13,7 @@ const GEOMETRIA: GeometriaSilo = {
   diametro: 1.9,
   areaBaseMaior: 2.835284975,
   areaBaseMenor: 0.04908734375,
-  alturaTronco: 0.825,
+  alturaTronco: 1,        // ← era 0.825
 };
 
 const PESO_25 = 624.96;

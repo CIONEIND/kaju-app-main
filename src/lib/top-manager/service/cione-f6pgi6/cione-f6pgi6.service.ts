@@ -6,9 +6,23 @@ import {
   type SalvarAnaliseF6PGI6SchemaType,
 } from "./schemas";
 import type { FiltroAnaliseF6PGI6 } from "../../repository/cione-f6pgi6/types";
+import { buscarParametrosAnalise } from "@/lib/analises/parametros";
+import {
+  calcularConsumo,
+  calcularLeitura,
+  ErroCalculoSilo,
+  type ResultadoCalculo,
+} from "@/lib/analises/calculo-silo";
 
 function toSqlDateTime(data: string, hora?: string): string {
   return `${data} ${hora ?? "00:00"}:00`;
+}
+
+/** Arredonda para a escala da coluna */
+function escala(valor: number | null, casas: number): number | null {
+  if (valor === null) return null;
+  const fator = 10 ** casas;
+  return Math.round(valor * fator) / fator;
 }
 
 export default class CioneF6PGI6Service {
@@ -49,25 +63,94 @@ export default class CioneF6PGI6Service {
     }
     return v.data;
   }
+
+ /** 0 = rascunho · 1 = concluída */
   private statusNum(s?: "rascunho" | "concluida"): number {
-  return s === "rascunho" ? 0 : 1;
-}
+    return s === "rascunho" ? 0 : 1;
+  }
+
+  /** 0 = vazio · 1 = produto */
+  private modoNum(m: "vazio" | "produto"): number {
+    return m === "produto" ? 1 : 0;
+  }
+
+  /**
+   * Resolve a geometria e o peso específico vigentes e aplica o motor
+   * nas duas leituras do ciclo, devolvendo as colunas calculadas.
+   */
+  private async calcularCiclo(v: SalvarAnaliseF6PGI6SchemaType) {
+    const data = new Date(`${v.data}T${v.hora ?? "00:00"}:00`);
+    const { geometria, peso } = await buscarParametrosAnalise(
+      v.siloId,
+      v.tipoId,
+      data,
+    );
+
+    const temInicial = v.vazioInicial !== null && v.vazioInicial !== undefined;
+    const temFinal = v.vazioFinal !== null && v.vazioFinal !== undefined;
+
+    const inicial: ResultadoCalculo | null = temInicial
+      ? calcularLeitura({
+          geometria,
+          valorMedido: v.vazioInicial as number,
+          modo: v.modoMedicao,
+          pesoEspecifico: peso.valorKgM3,
+        })
+      : null;
+
+    const final: ResultadoCalculo | null = temFinal
+      ? calcularLeitura({
+          geometria,
+          valorMedido: v.vazioFinal as number,
+          modo: v.modoMedicao,
+          pesoEspecifico: peso.valorKgM3,
+        })
+      : null;
+
+    const consumo =
+      inicial && final
+        ? calcularConsumo(inicial, final, peso.valorKgM3)
+        : null;
+
+    return {
+      VolumeInicial: escala(inicial?.volumeTotal ?? null, 4),
+      VolumeFinal: escala(final?.volumeTotal ?? null, 4),
+      PesoInicial: escala(inicial?.pesoKg ?? null, 3),
+      PesoFinal: escala(final?.pesoKg ?? null, 3),
+      VolumeConsumido: escala(consumo?.volumeConsumido ?? null, 4),
+      PesoConsumido: escala(consumo?.pesoConsumido ?? null, 3),
+    };
+  }
+
+  private async montarLinha(v: SalvarAnaliseF6PGI6SchemaType) {
+    let calculo: Awaited<ReturnType<typeof this.calcularCiclo>>;
+
+    try {
+      calculo = await this.calcularCiclo(v);
+    } catch (e) {
+      if (e instanceof ErroCalculoSilo) throw new Error(e.message);
+      throw e;
+    }
+
+    return {
+      DATAHORA: toSqlDateTime(v.data, v.hora) as unknown as Date,
+      Responsavel: v.responsavelCdUsr,
+      Lote: v.loteId,
+      Silo: v.siloId,
+      Tipo: v.tipoId,
+      VazioInicial: v.vazioInicial ?? null,
+      VazioFinal: v.vazioFinal ?? null,
+      Competencia: (v.competencia ?? v.data) as unknown as Date,
+      ModoMedicao: this.modoNum(v.modoMedicao),
+      Status: this.statusNum(v.status),
+      ...calculo,
+    };
+  }
 
   async criar(dto: SalvarAnaliseF6PGI6SchemaType, tsx: Knex = this.db) {
     const v = this.validar(dto);
-    return CioneF6PGI6Repository.inserir(
-      {
-        DATAHORA: toSqlDateTime(v.data, v.hora) as unknown as Date,
-        Responsavel: v.responsavelCdUsr,
-        Lote: v.loteId,
-        Silo: v.siloId,
-        Tipo: v.tipoId,
-        Cubagem: v.cubagem ?? null,
-        Consumo: v.consumo ?? null,
-        Status: this.statusNum(v.status),
-      },
-      tsx,
-    );
+    const linha = await this.montarLinha(v);
+    return CioneF6PGI6Repository.inserir(linha, tsx);
   }
 
   async atualizar(
@@ -76,20 +159,9 @@ export default class CioneF6PGI6Service {
     tsx: Knex = this.db,
   ) {
     const v = this.validar(dto);
-    const afetadas = await CioneF6PGI6Repository.atualizar(
-      id,
-      {
-        DATAHORA: toSqlDateTime(v.data, v.hora) as unknown as Date,
-        Responsavel: v.responsavelCdUsr,
-        Lote: v.loteId,
-        Silo: v.siloId,
-        Tipo: v.tipoId,
-        Cubagem: v.cubagem ?? null,
-        Consumo: v.consumo ?? null,
-        Status: this.statusNum(v.status),
-      },
-      tsx,
-    );
+    const linha = await this.montarLinha(v);
+
+    const afetadas = await CioneF6PGI6Repository.atualizar(id, linha, tsx);
     if (!afetadas) throw new Error("Análise não encontrada.");
     return afetadas;
   }

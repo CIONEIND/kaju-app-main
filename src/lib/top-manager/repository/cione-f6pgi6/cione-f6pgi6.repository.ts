@@ -14,8 +14,8 @@ const SCHEMA = "dbo";
 /** CdObj de Tipo (mesma família usada na F3PGI6) */
 const TIPOS_CDOBJ = [52913, 52914, 52916, 52917, 53089, 53093, 53097];
 
-/** CdObj de Silo — CONFIRMAR estes códigos no TbObj */
-const SILOS_CDOBJ = [53115];
+/** CdObjMae dos silos — o pai de todos os silos no TbObj */
+const SILOS_CDOBJ_MAE = [53115];
 
 function n(valor: unknown): number | null {
   return valor === null || valor === undefined ? null : Number(valor);
@@ -25,6 +25,11 @@ function s(valor: unknown): string | null {
   return valor === null || valor === undefined ? null : String(valor);
 }
 
+/** tinyint → 'vazio' | 'produto' */
+function toModo(valor: unknown): "vazio" | "produto" {
+  return Number(valor) === 1 ? "produto" : "vazio";
+}
+
 function toAnalise(row: Record<string, unknown>): AnaliseF6PGI6 {
   return {
     id: row.ID as number,
@@ -32,6 +37,7 @@ function toAnalise(row: Record<string, unknown>): AnaliseF6PGI6 {
     hora: (row.Hora as string) ?? "",
     responsavelCdUsr: n(row.Responsavel),
     responsavelNome: s(row.ResponsavelNome),
+    /* 0 = rascunho · 1 = concluída */
     status: Number(row.Status ?? 1),
     loteId: n(row.Lote),
     loteNome: s(row.LoteNome),
@@ -39,8 +45,17 @@ function toAnalise(row: Record<string, unknown>): AnaliseF6PGI6 {
     siloNome: s(row.SiloNome),
     tipoId: n(row.Tipo),
     tipoNome: s(row.TipoNome),
-    cubagem: n(row.Cubagem),
-    consumo: n(row.Consumo),
+
+    vazioInicial: n(row.VazioInicial),
+    vazioFinal: n(row.VazioFinal),
+    competencia: s(row.Competencia),
+    modoMedicao: toModo(row.ModoMedicao),
+    volumeInicial: n(row.VolumeInicial),
+    volumeFinal: n(row.VolumeFinal),
+    pesoInicial: n(row.PesoInicial),
+    pesoFinal: n(row.PesoFinal),
+    volumeConsumido: n(row.VolumeConsumido),
+    pesoConsumido: n(row.PesoConsumido),
   };
 }
 
@@ -65,8 +80,16 @@ export default class CioneF6PGI6Repository {
         "C.Lote",
         "C.Silo",
         "C.Tipo",
-        "C.Cubagem",
-        "C.Consumo",
+        "C.VazioInicial",
+        "C.VazioFinal",
+        tsx.raw("CONVERT(varchar(10), C.Competencia, 120) as Competencia"),
+        "C.ModoMedicao",
+        "C.VolumeInicial",
+        "C.VolumeFinal",
+        "C.PesoInicial",
+        "C.PesoFinal",
+        "C.VolumeConsumido",
+        "C.PesoConsumido",
         "C.Status",
         "ObjTp.NmObj as TipoNome",
         "ObjSil.NmObj as SiloNome",
@@ -122,7 +145,7 @@ export default class CioneF6PGI6Repository {
     return row ? toAnalise(row) : null;
   }
 
-  /** Equivalente ao UNION de RESUMO da query: SUM(Consumo) por Tipo + Lote */
+  /** SUM(PesoConsumido) por Tipo + Lote */
   static async resumo(
     filtro: FiltroAnaliseF6PGI6 = {},
     tsx: Knex = this.db,
@@ -139,7 +162,7 @@ export default class CioneF6PGI6Repository {
         "ObjTp.NmObj as TipoNome",
         "LS.Id as LoteId",
         "LS.NomeLote as LoteNome",
-        tsx.raw("SUM(CONVERT(decimal(19,2), C.Consumo)) as ConsumoTotal"),
+        tsx.raw("SUM(CONVERT(decimal(19,3), C.PesoConsumido)) as ConsumoTotal"),
         tsx.raw("COUNT(ObjSil.CdObj) as QtdSilos"),
       )
       .orderBy("ConsumoTotal", "desc");
@@ -203,6 +226,7 @@ export default class CioneF6PGI6Repository {
       nome: r.nome ?? `Obj ${r.cdObj}`,
     }));
   }
+
   static async listarPorCdObjMae(cdObjs: number[], tsx: Knex = this.db) {
     const rows = await tsx
       .withSchema(SCHEMA)
@@ -221,6 +245,6 @@ export default class CioneF6PGI6Repository {
   }
 
   static async listarSilos(tsx: Knex = this.db) {
-    return this.listarPorCdObjMae(SILOS_CDOBJ, tsx);
+    return this.listarPorCdObjMae(SILOS_CDOBJ_MAE, tsx);
   }
 }

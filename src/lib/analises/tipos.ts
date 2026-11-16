@@ -1,4 +1,6 @@
 export type StatusAnalise = "concluida" | "rascunho";
+export type ModoMedicao = "vazio" | "produto";
+
 export interface OpcaoCombo {
   valor: string;
   rotulo: string;
@@ -13,7 +15,7 @@ export interface FiltroCentral {
   siloId?: number;
   origemId?: number;
   /** Interno: injetado pela action ao filtrar rascunhos. Nunca vem da URL. */
-  responsavelCdUsr?: number; 
+  responsavelCdUsr?: number;
   limite?: number;
   offset?: number;
 }
@@ -34,8 +36,9 @@ export interface DetalheAnalise {
   subtitulo: string;
   identificacao: { label: string; valor: string }[];
   grupos: { titulo: string; itens: { label: string; valor: string }[] }[];
-  dadosIniciais: any;
+  dadosIniciais: DadosIniciaisAnalise;
 }
+
 export interface DadosIniciaisAnalise {
   id?: number;
   data?: string;
@@ -52,8 +55,13 @@ export interface DadosIniciaisAnalise {
   t2Casca?: number | null;
   t3Casca?: number | null;
   // F6PGI6
-  cubagem?: number | null;
-  consumo?: number | null;
+  /** Nível de vazio no início do ciclo, em metros */
+  vazioInicial?: number | null;
+  /** Nível de vazio no fim do ciclo, em metros */
+  vazioFinal?: number | null;
+  /** 0 = vazio · 1 = produto */
+  modoMedicao?: ModoMedicao | null;
+  competencia?: string | null;
   // LCC
   viscosidade?: number | null;
   altura?: number | null;
@@ -77,6 +85,8 @@ export interface ResultadoCentral {
   origens?: OpcaoCombo[];
   resumos?: { label: string; valor: string }[];
   status?: StatusAnalise;
+  /** Período efetivamente aplicado, já formatado para exibição */
+  periodo?: string;
 }
 
 export interface FiltrosDisponiveis {
@@ -86,7 +96,6 @@ export interface FiltrosDisponiveis {
   silo?: boolean;
   origem?: boolean;
 }
-
 
 export interface FormularioBaseProps {
   modo?: "novo" | "editar";
@@ -98,4 +107,3 @@ export interface FormularioBaseProps {
   silos?: OpcaoCombo[];
   origens?: OpcaoCombo[];
 }
-

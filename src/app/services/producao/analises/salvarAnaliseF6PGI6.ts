@@ -16,8 +16,10 @@ export interface SalvarAnaliseF6PGI6Input {
   loteId: number;
   siloId: number;
   tipoId: number;
-  cubagem?: number | null;
-  consumo?: number | null;
+  modoMedicao?: "vazio" | "produto";
+  competencia?: string;
+  vazioInicial?: number | null;
+  vazioFinal?: number | null;
 }
 
 export type SalvarAnaliseF6PGI6Result =
@@ -40,8 +42,10 @@ export async function salvarAnaliseF6PGI6(
       loteId: input.loteId,
       siloId: input.siloId,
       tipoId: input.tipoId,
-      cubagem: input.cubagem ?? null,
-      consumo: input.consumo ?? null,
+      modoMedicao: input.modoMedicao ?? "vazio",
+      competencia: input.competencia,
+      vazioInicial: input.vazioInicial ?? null,
+      vazioFinal: input.vazioFinal ?? null,
     };
 
     if (input.id) {

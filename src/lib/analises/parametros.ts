@@ -1,27 +1,27 @@
-import { prisma } from "@/lib/prisma";
-import type { TipoSilo } from "./calculo-silo";
+/* ============================================================
+   Consulta de parâmetros vigentes (ParametroSilo e PesoEspecifico)
+   Regra: vigenciaInicio <= data E (vigenciaFim IS NULL OU > data)
+   ============================================================ */
 
-export interface ParametroSiloVigente {
-  alturaUtil: number;
-  diametro: number;
-  areaBaseMaior: number;
-  areaBaseMenor: number;
-  alturaTronco: number;
-}
+import { prisma } from "@/lib/prisma";
+import type { GeometriaSilo } from "./calculo-silo";
 
 export interface PesoEspecificoVigente {
   valorKgM3: number;
   safra: string;
 }
 
+function formatarData(data: Date): string {
+  return data.toISOString().slice(0, 10);
+}
+
 /**
  * Geometria do silo vigente na data informada.
- * Regra: vigenciaInicio <= data E (vigenciaFim IS NULL OU vigenciaFim > data)
  */
 export async function buscarParametroSilo(
   siloCdObj: number,
   data: Date,
-): Promise<ParametroSiloVigente> {
+): Promise<GeometriaSilo> {
   const registro = await prisma.parametroSilo.findFirst({
     where: {
       siloCdObj,
@@ -33,7 +33,7 @@ export async function buscarParametroSilo(
 
   if (!registro) {
     throw new Error(
-      `Nenhuma geometria vigente para o silo ${siloCdObj} em ${data.toISOString().slice(0, 10)}.`,
+      `Nenhuma geometria vigente para o silo ${siloCdObj} em ${formatarData(data)}.`,
     );
   }
 
@@ -64,7 +64,7 @@ export async function buscarPesoEspecifico(
 
   if (!registro) {
     throw new Error(
-      `Nenhum peso específico vigente para o tipo ${tipoAnaliseCdObj} em ${data.toISOString().slice(0, 10)}.`,
+      `Nenhum peso específico vigente para o tipo ${tipoAnaliseCdObj} em ${formatarData(data)}.`,
     );
   }
 
@@ -74,15 +74,18 @@ export async function buscarPesoEspecifico(
   };
 }
 
-/** Resolve os dois parâmetros de uma vez, para uma análise. */
+/**
+ * Resolve os dois parâmetros de uma análise em uma só chamada.
+ */
 export async function buscarParametrosAnalise(
   siloCdObj: number,
   tipoAnaliseCdObj: number,
   data: Date,
-): Promise<{ silo: ParametroSiloVigente; peso: PesoEspecificoVigente }> {
-  const [silo, peso] = await Promise.all([
+): Promise<{ geometria: GeometriaSilo; peso: PesoEspecificoVigente }> {
+  const [geometria, peso] = await Promise.all([
     buscarParametroSilo(siloCdObj, data),
     buscarPesoEspecifico(tipoAnaliseCdObj, data),
   ]);
-  return { silo, peso };
+
+  return { geometria, peso };
 }

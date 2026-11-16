@@ -1,5 +1,4 @@
 "use client";
-
 import { Button, useOverlayState } from "@heroui/react";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -15,13 +14,13 @@ import {
     paraNumero,
     paraTexto,
 } from "@/lib/analises/numerico";
-import type { FormularioBaseProps } from "@/lib/analises/tipos";
+import type { FormularioBaseProps, ModoMedicao } from "@/lib/analises/tipos";
 import { ConfirmarSalvarModal } from "./ConfirmarSalvarModal";
 import { useRascunho } from "./useRascunho";
 
 interface Medicoes {
-    cubagem: string;
-    consumo: string;
+    vazioInicial: string;
+    vazioFinal: string;
 }
 
 function hoje(): string {
@@ -34,6 +33,14 @@ function agora(): string {
     const d = new Date();
     const p = (n: number) => String(n).padStart(2, "0");
     return `${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+/** Nível válido: número não negativo com até 2 casas decimais */
+function nivelValido(texto: string): boolean {
+    if (!texto.trim()) return true;
+    const n = paraNumero(texto);
+    if (n === null || n < 0) return false;
+    return Math.round(n * 100) === n * 100;
 }
 
 export function FormularioF6PGI6({
@@ -61,14 +68,19 @@ export function FormularioF6PGI6({
     );
     const [data, setData] = useState(dadosIniciais?.data ?? hoje());
     const [hora, setHora] = useState(dadosIniciais?.hora ?? agora());
+    const [modoMedicao, setModoMedicao] = useState<ModoMedicao>(
+        dadosIniciais?.modoMedicao ?? "vazio",
+    );
+    const [competencia, setCompetencia] = useState(
+        dadosIniciais?.competencia ?? "",
+    );
+
     const [sucessoConfirmacao, setSucessoConfirmacao] = useState(false);
     const [erroConfirmacao, setErroConfirmacao] = useState<string | null>(null);
-
     const [medicoes, setMedicoes] = useState<Medicoes>({
-        cubagem: paraTexto(dadosIniciais?.cubagem),
-        consumo: paraTexto(dadosIniciais?.consumo),
+        vazioInicial: paraTexto(dadosIniciais?.vazioInicial),
+        vazioFinal: paraTexto(dadosIniciais?.vazioFinal),
     });
-
     const [rascunhoId, setRascunhoId] = useState<number | null>(
         dadosIniciais?.id ?? null,
     );
@@ -77,11 +89,15 @@ export function FormularioF6PGI6({
 
     const semVinculo = usuario.cdUsrTopManager === null;
     const podeRascunhar =
-        Boolean(lote) && Boolean(silo) && Boolean(tipoId) && Boolean(data) && !semVinculo;
+        Boolean(lote) &&
+        Boolean(silo) &&
+        Boolean(tipoId) &&
+        Boolean(data) &&
+        !semVinculo;
 
     const { salvando, ultimoSalvo, cancelar } = useRascunho({
         habilitado: podeRascunhar && !editando && !enviando,
-        dados: { lote, silo, tipoId, data, hora, medicoes },
+        dados: { lote, silo, tipoId, data, hora, modoMedicao, competencia, medicoes },
         idAtual: rascunhoId,
         salvar: async (d, id) => {
             const r = await salvarAnaliseF6PGI6({
@@ -93,8 +109,10 @@ export function FormularioF6PGI6({
                 loteId: Number(d.lote),
                 siloId: Number(d.silo),
                 tipoId: Number(d.tipoId),
-                cubagem: paraNumero(d.medicoes.cubagem),
-                consumo: paraNumero(d.medicoes.consumo),
+                modoMedicao: d.modoMedicao,
+                competencia: d.competencia || undefined,
+                vazioInicial: paraNumero(d.medicoes.vazioInicial),
+                vazioFinal: paraNumero(d.medicoes.vazioFinal),
             });
             return r.ok ? { ok: true, id: r.id } : { ok: false, erro: r.erro };
         },
@@ -104,12 +122,30 @@ export function FormularioF6PGI6({
     function handleSubmit(e: FormEvent<HTMLFormElement>) {
         e.preventDefault();
         setErro(null);
-
         if (!lote) return setErro("Selecione o lote.");
         if (!silo) return setErro("Selecione o silo.");
         if (!tipoId) return setErro("Selecione o tipo.");
         if (!data) return setErro("Informe a data da análise.");
         if (semVinculo) return setErro("Usuário sem vínculo com o TopManager.");
+
+        if (!nivelValido(medicoes.vazioInicial)) {
+            return setErro(
+                "O vazio inicial deve ser um número não negativo com até 2 casas decimais.",
+            );
+        }
+        if (!nivelValido(medicoes.vazioFinal)) {
+            return setErro(
+                "O vazio final deve ser um número não negativo com até 2 casas decimais.",
+            );
+        }
+
+        const vi = paraNumero(medicoes.vazioInicial);
+        const vf = paraNumero(medicoes.vazioFinal);
+        if (vi !== null && vf !== null && vf < vi) {
+            return setErro(
+                "O vazio final deve ser maior ou igual ao vazio inicial — o silo não pode encher durante o consumo.",
+            );
+        }
 
         setErroConfirmacao(null);
         setSucessoConfirmacao(false);
@@ -130,18 +166,17 @@ export function FormularioF6PGI6({
                 loteId: Number(lote),
                 siloId: Number(silo),
                 tipoId: Number(tipoId),
-                cubagem: paraNumero(medicoes.cubagem),
-                consumo: paraNumero(medicoes.consumo),
+                modoMedicao,
+                competencia: competencia || undefined,
+                vazioInicial: paraNumero(medicoes.vazioInicial),
+                vazioFinal: paraNumero(medicoes.vazioFinal),
             };
-
             const r = await salvarAnaliseF6PGI6(input);
             if (!r.ok) {
                 setErro(r.erro);
                 return;
             }
-
-            setSucessoConfirmacao(true);    // mostra o check verde
-
+            setSucessoConfirmacao(true);
             setTimeout(() => {
                 confirmacao.close();
                 router.push(basePath);
@@ -162,7 +197,9 @@ export function FormularioF6PGI6({
         setTipoId("");
         setData(hoje());
         setHora(agora());
-        setMedicoes({ cubagem: "", consumo: "" });
+        setModoMedicao("vazio");
+        setCompetencia("");
+        setMedicoes({ vazioInicial: "", vazioFinal: "" });
         setRascunhoId(null);
         setErro(null);
     }
@@ -184,8 +221,12 @@ export function FormularioF6PGI6({
             label: "Data",
             valor: `${formatarDataBR(data)}${hora ? ` · ${hora}` : ""}`,
         },
-        { label: "Cubagem", valor: medicoes.cubagem || "—" },
-        { label: "Consumo", valor: medicoes.consumo || "—" },
+        {
+            label: "Modo",
+            valor: modoMedicao === "vazio" ? "Vazio" : "Produto",
+        },
+        { label: "Vazio inicial", valor: medicoes.vazioInicial || "—" },
+        { label: "Vazio final", valor: medicoes.vazioFinal || "—" },
     ];
 
     const campoData =
@@ -202,7 +243,6 @@ export function FormularioF6PGI6({
                 >
                     <ArrowLeft size={18} />
                 </button>
-
                 <div className="min-w-0">
                     <h2 className="text-lg font-semibold text-foreground">
                         {editando ? "Editar análise — F6PGI6" : "Nova análise — F6PGI6"}
@@ -240,7 +280,6 @@ export function FormularioF6PGI6({
                     Seu usuário não está vinculado a um CdUsr do TopManager.
                 </div>
             )}
-
             {erro && (
                 <div className="mx-6 mt-4 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800">
                     {erro}
@@ -304,29 +343,78 @@ export function FormularioF6PGI6({
                             value={hora}
                         />
                     </div>
+                    <div>
+                        <label className="mb-1.5 block text-sm font-medium text-foreground">
+                            Competência
+                        </label>
+                        <input
+                            className={campoData}
+                            onChange={(e) => setCompetencia(e.target.value)}
+                            type="date"
+                            value={competencia}
+                        />
+                    </div>
                 </div>
 
                 <fieldset className="rounded-lg border border-border p-4">
                     <legend className="px-1 text-xs font-semibold uppercase tracking-wide text-muted">
-                        Medições
+                        Medição
                     </legend>
+
+                    <div className="mb-4">
+                        <label className="mb-1.5 block text-xs font-medium text-muted">
+                            Modo de medição
+                        </label>
+                        <div className="inline-flex overflow-hidden rounded-lg border border-border">
+                            <button
+                                className={`px-4 py-2 text-sm transition-colors ${modoMedicao === "vazio"
+                                    ? "bg-primary text-white"
+                                    : "bg-surface-secondary text-foreground hover:bg-surface-tertiary"
+                                    }`}
+                                onClick={() => setModoMedicao("vazio")}
+                                type="button"
+                            >
+                                Vazio
+                            </button>
+                            <button
+                                className={`px-4 py-2 text-sm transition-colors ${modoMedicao === "produto"
+                                    ? "bg-primary text-white"
+                                    : "bg-surface-secondary text-foreground hover:bg-surface-tertiary"
+                                    }`}
+                                onClick={() => setModoMedicao("produto")}
+                                type="button"
+                            >
+                                Produto
+                            </button>
+                        </div>
+                        <p className="mt-1.5 text-xs text-muted">
+                            {modoMedicao === "vazio"
+                                ? "Informe a altura vazia medida do topo até o grão."
+                                : "Informe a altura do produto (coluna de grão)."}
+                        </p>
+                    </div>
+
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                         <div>
                             <label className="mb-1 block text-xs font-medium text-muted">
-                                Cubagem
+                                Vazio inicial (m)
                             </label>
                             <CampoNumerico
-                                onChange={(v) => setMedicoes((p) => ({ ...p, cubagem: v }))}
-                                value={medicoes.cubagem}
+                                onChange={(v) =>
+                                    setMedicoes((p) => ({ ...p, vazioInicial: v }))
+                                }
+                                value={medicoes.vazioInicial}
                             />
                         </div>
                         <div>
                             <label className="mb-1 block text-xs font-medium text-muted">
-                                Consumo
+                                Vazio final (m)
                             </label>
                             <CampoNumerico
-                                onChange={(v) => setMedicoes((p) => ({ ...p, consumo: v }))}
-                                value={medicoes.consumo}
+                                onChange={(v) =>
+                                    setMedicoes((p) => ({ ...p, vazioFinal: v }))
+                                }
+                                value={medicoes.vazioFinal}
                             />
                         </div>
                     </div>
@@ -351,12 +439,12 @@ export function FormularioF6PGI6({
 
             <ConfirmarSalvarModal
                 editando={editando}
-                enviando={enviando}
                 erro={erroConfirmacao}
-                sucesso={sucessoConfirmacao}
+                enviando={enviando}
                 onConfirmar={confirmarSalvar}
                 resumo={resumo}
                 state={confirmacao}
+                sucesso={sucessoConfirmacao}
             />
         </div>
     );

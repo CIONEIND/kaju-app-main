@@ -28,6 +28,7 @@ import type {
 } from "@/lib/analises/tipos";
 import { ConfirmarSalvarModal } from "./ConfirmarSalvarModal";
 import { useRascunho } from "./useRascunho";
+import { BotaoExcluirRascunho } from "./BotaoExcluirRascunho";
 
 interface Medicoes {
     vazioInicial: string;
@@ -1052,6 +1053,17 @@ export function FormularioF6PGI6({
                 </Secao>
 
                 <div className="flex items-center justify-end gap-2 rounded-xl border border-border bg-surface px-6 py-4">
+                    {/* Excluir só aparece quando já existe rascunho salvo */}
+                    {rascunhoId !== null && !editando && (
+                        <BotaoExcluirRascunho
+                            basePath={basePath}
+                            id={rascunhoId}
+                            onExcluido={() => {
+                                cancelar();
+                                limpar();
+                            }}
+                        />
+                    )}
                     <Button
                         onPress={() => (editando ? router.push(basePath) : limpar())}
                         variant="secondary"

@@ -79,7 +79,7 @@ export default class CioneF6PGI6Service {
       tsx,
     );
   }
-
+  
   private validar(dto: SalvarAnaliseF6PGI6SchemaType) {
     const v = salvarAnaliseF6PGI6Schema.safeParse(dto);
     if (!v.success) {
@@ -280,5 +280,15 @@ private async montarLinha(v: SalvarAnaliseF6PGI6SchemaType) {
       proximaAnaliseId: proxima?.id ?? null,
       proximaCompetencia: proxima?.competencia ?? null,
     };
+  }
+    /**
+   * Exclui um rascunho.
+   *
+   * Só rascunho pode ser excluído — análise concluída é registro de
+   * produção. O filtro de status também vai no DELETE, como última
+   * barreira caso outro caminho chame este método direto.
+   */
+  async excluir(id: number, tsx: Knex = this.db): Promise<number> {
+    return CioneF6PGI6Repository.excluir(id, tsx);
   }
 }

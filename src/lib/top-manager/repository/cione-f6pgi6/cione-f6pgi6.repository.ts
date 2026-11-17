@@ -221,7 +221,7 @@ export default class CioneF6PGI6Repository {
     );
     return result[0].ID;
   }
-
+  
   static async atualizar(
     id: number,
     dados: Omit<CioneF6PGI6Row, "ID">,
@@ -229,7 +229,18 @@ export default class CioneF6PGI6Repository {
   ): Promise<number> {
     return tsx.withSchema(SCHEMA).table(TABELA).where("ID", id).update(dados);
   }
-
+  static async excluir(
+    id: number,
+    tsx: Knex = this.db,
+  ): Promise<number> {
+    return tsx
+      .withSchema(SCHEMA)
+      .table(TABELA)
+      .where("ID", id)
+      .where("Status", 0)
+      .del();
+  }
+  
   /** Catálogos */
   static async listarLotes(tsx: Knex = this.db) {
     const rows = await tsx

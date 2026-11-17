@@ -1,111 +1,79 @@
-"use client";
-
 import { useCallback, useEffect, useRef, useState } from "react";
 
-export interface DadosRascunho {
-  lote: string;
-  silo: string;
-  tipoId: string;
-  dataInicial: string;
-  horaInicial: string;
-  dataFinal: string;
-  horaFinal: string;
-  modoMedicao: "vazio" | "produto";
-  medicoes: {
-    vazioInicial: string;
-    vazioFinal: string;
-  };
+interface ResultadoSalvar {
+    ok: boolean;
+    id?: number;
+    erro?: string;
 }
 
-export interface ResultadoSalvarRascunho {
-  ok: boolean;
-  id?: number;
-  erro?: string;
+interface UseRascunhoProps<TDados> {
+    habilitado: boolean;
+    dados: TDados;
+    idAtual: number | null;
+    salvar: (dados: TDados, id: number | null) => Promise<ResultadoSalvar>;
+    onId: (id: number) => void;
+    /** Intervalo do debounce em ms */
+    intervalo?: number;
 }
 
-interface UseRascunhoParams {
-  habilitado: boolean;
-  dados: DadosRascunho;
-  idAtual: number | null;
-  salvar: (
-    dados: DadosRascunho,
-    id: number | null,
-  ) => Promise<ResultadoSalvarRascunho>;
-  onId: (id: number) => void;
-  debounceMs?: number;
-}
+export function useRascunho<TDados>({
+    habilitado,
+    dados,
+    idAtual,
+    salvar,
+    onId,
+    intervalo = 1500,
+}: UseRascunhoProps<TDados>) {
+    const [salvando, setSalvando] = useState(false);
+    const [ultimoSalvo, setUltimoSalvo] = useState<Date | null>(null);
 
-interface UseRascunhoRetorno {
-  salvando: boolean;
-  ultimoSalvo: Date | null;
-  cancelar: () => void;
-}
+    /* Refs para não reiniciar o timer a cada render */
+    const dadosRef = useRef(dados);
+    const idRef = useRef(idAtual);
+    const salvarRef = useRef(salvar);
+    const onIdRef = useRef(onId);
+    const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const canceladoRef = useRef(false);
 
-/**
- * Salva o rascunho automaticamente após o usuário parar de digitar.
- *
- * - Só dispara quando `habilitado` é true.
- * - Não dispara se os dados não mudaram desde o último salvamento.
- * - Reaproveita o `idAtual` para atualizar em vez de criar novo registro.
- * - `cancelar()` limpa o timer pendente antes de concluir a análise,
- *   evitando que um rascunho sobrescreva o registro já concluído.
- */
-export function useRascunho({
-  habilitado,
-  dados,
-  idAtual,
-  salvar,
-  onId,
-  debounceMs = 1200,
-}: UseRascunhoParams): UseRascunhoRetorno {
-  const [salvando, setSalvando] = useState(false);
-  const [ultimoSalvo, setUltimoSalvo] = useState<Date | null>(null);
+    dadosRef.current = dados;
+    idRef.current = idAtual;
+    salvarRef.current = salvar;
+    onIdRef.current = onId;
 
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const ultimaAssinatura = useRef<string>("");
-  const salvandoRef = useRef(false);
-
-  const assinatura = JSON.stringify(dados);
-
-  const cancelar = useCallback(() => {
-    if (timer.current) {
-      clearTimeout(timer.current);
-      timer.current = null;
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!habilitado) {
-      cancelar();
-      return;
-    }
-    if (assinatura === ultimaAssinatura.current) return;
-    if (salvandoRef.current) return;
-
-    cancelar();
-
-    timer.current = setTimeout(async () => {
-      salvandoRef.current = true;
-      setSalvando(true);
-
-      try {
-        const r = await salvar(dados, idAtual);
-        if (r.ok) {
-          ultimaAssinatura.current = assinatura;
-          setUltimoSalvo(new Date());
-          if (r.id !== undefined && r.id !== idAtual) onId(r.id);
+    const cancelar = useCallback(() => {
+        canceladoRef.current = true;
+        if (timerRef.current) {
+            clearTimeout(timerRef.current);
+            timerRef.current = null;
         }
-      } finally {
-        salvandoRef.current = false;
-        setSalvando(false);
-      }
-    }, debounceMs);
+    }, []);
 
-    return cancelar;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [assinatura, habilitado, idAtual, debounceMs]);
+    useEffect(() => {
+        if (!habilitado) return;
 
-  useEffect(() => cancelar, [cancelar]);
+        canceladoRef.current = false;
 
-  return { salvando, ultimoSalvo, cancelar };
+        if (timerRef.current) clearTimeout(timerRef.current);
+
+        timerRef.current = setTimeout(async () => {
+            if (canceladoRef.current) return;
+            setSalvando(true);
+            try {
+                const r = await salvarRef.current(dadosRef.current, idRef.current);
+                if (canceladoRef.current) return;
+                if (r.ok && r.id !== undefined) {
+                    onIdRef.current(r.id);
+                    setUltimoSalvo(new Date());
+                }
+            } finally {
+                if (!canceladoRef.current) setSalvando(false);
+            }
+        }, intervalo);
+
+        return () => {
+            if (timerRef.current) clearTimeout(timerRef.current);
+        };
+    }, [habilitado, dados, intervalo]);
+
+    return { salvando, ultimoSalvo, cancelar };
 }

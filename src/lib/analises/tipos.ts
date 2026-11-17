@@ -166,3 +166,23 @@ export interface FormularioBaseProps {
   silos?: OpcaoSilo[];
   origens?: OpcaoCombo[];
 }
+
+export interface LinhaUmidadeF5PGI6 {
+  item: "A" | "C";
+  t1?: number | null;
+  t2?: number | null;
+  t3?: number | null;
+  media?: number | null;
+}
+
+export interface DadosIniciaisF5PGI6 {
+  loteId?: number | null;
+  siloId?: number | null;
+  tipoId?: number | null;
+  origem?: string;
+  data?: string;
+  hora?: string;
+  linhas: LinhaUmidadeF5PGI6[];
+  situacao?: string;
+  responsavelFinal?: string;
+}

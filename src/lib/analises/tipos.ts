@@ -66,6 +66,7 @@ export interface DadosIniciaisAnalise {
   origemId?: number | null;
   modoMedicao?: ModoMedicao;
 
+  /* F6PGI6 — leitura inicial e final */
   dataInicial?: string;
   horaInicial?: string;
   vazioInicial?: number | null;
@@ -74,6 +75,9 @@ export interface DadosIniciaisAnalise {
   horaFinal?: string;
   vazioFinal?: number | null;
 
+  /* F3PGI6 — data/hora única + amostras de amêndoa e casca */
+  data?: string;
+  hora?: string;
   t1Amendoa?: number | null;
   t2Amendoa?: number | null;
   t3Amendoa?: number | null;
@@ -81,6 +85,7 @@ export interface DadosIniciaisAnalise {
   t2Casca?: number | null;
   t3Casca?: number | null;
 
+  /* LCC — parâmetros de processo */
   viscosidade?: number | null;
   altura?: number | null;
   temperatura?: number | null;

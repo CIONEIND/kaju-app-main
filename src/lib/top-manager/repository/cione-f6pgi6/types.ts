@@ -1,34 +1,36 @@
 import type { StatusAnalise } from "@/lib/analises/tipos";
 
-/** 1 = concluída · 0 = rascunho */
-export type StatusTinyint = 0 | 1;
-
-/** 0 = vazio · 1 = produto */
-export type ModoMedicaoTinyint = 0 | 1;
-
 /** Linha crua da tabela CIONE_F6PGI6 (dbo) */
 export interface CioneF6PGI6Row {
   ID: number;
-  DATAHORA: Date | string;
+
+  /** Momento da leitura inicial */
+  DataHoraInicial: Date | string;
+  /** Momento da leitura final — nulo enquanto o ciclo não fecha */
+  DataHoraFinal: Date | string | null;
+
   Responsavel: number | null;
   Lote: number | null;
   Silo: number | null;
   Tipo: number | null;
-  /** Nível de vazio no início do ciclo, em metros */
+
   VazioInicial: number | null;
-  /** Nível de vazio no fim do ciclo, em metros */
   VazioFinal: number | null;
-  /** Data de competência da análise */
+
+  /** Dia de processamento — derivado da leitura inicial */
   Competencia: Date | string | null;
-  /** 0 = vazio · 1 = produto (NOT NULL) */
+
+  /** 0 = vazio · 1 = produto */
   ModoMedicao: number;
+
   VolumeInicial: number | null;
   VolumeFinal: number | null;
   PesoInicial: number | null;
   PesoFinal: number | null;
   VolumeConsumido: number | null;
   PesoConsumido: number | null;
-  /** 0 = concluída · 1 = rascunho (NOT NULL) */
+
+  /** 0 = rascunho · 1 = concluída */
   Status: number;
 }
 
@@ -37,6 +39,8 @@ export interface AnaliseF6PGI6 {
   id: number;
   data: string;
   hora: string;
+  dataFinal: string | null;
+  horaFinal: string | null;
   responsavelCdUsr: number | null;
   responsavelNome: string | null;
   loteId: number | null;
@@ -45,20 +49,21 @@ export interface AnaliseF6PGI6 {
   siloNome: string | null;
   tipoId: number | null;
   tipoNome: string | null;
-  /** 0 = concluída · 1 = rascunho */
-  status: number;
 
-  /* ── Ciclo de consumo ── */
   vazioInicial: number | null;
   vazioFinal: number | null;
   competencia: string | null;
   modoMedicao: "vazio" | "produto";
+
   volumeInicial: number | null;
   volumeFinal: number | null;
   pesoInicial: number | null;
   pesoFinal: number | null;
   volumeConsumido: number | null;
   pesoConsumido: number | null;
+
+  /** 0 = rascunho · 1 = concluída */
+  status: number;
 }
 
 export interface ResumoF6PGI6 {

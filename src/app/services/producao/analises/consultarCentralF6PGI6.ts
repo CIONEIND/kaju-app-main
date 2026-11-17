@@ -14,6 +14,9 @@ import type {
   FiltroCentral,
   ResultadoCentral,
 } from "@/lib/analises/tipos";
+import type { AnaliseF6PGI6 } from "@/lib/top-manager/repository/cione-f6pgi6/types";
+import { consultarImpactoF6PGI6 } from "./consultarImpactoF6PGI6";
+import { consultarReferenciasF6PGI6 } from "./consultarReferenciasF6PGI6";
 
 const service = new CioneF6PGI6Service();
 
@@ -24,6 +27,9 @@ const num = (v: number | null) =>
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
       });
+
+const combo = (lista: { cdObj: number; nome: string }[]) =>
+  lista.map((i) => ({ valor: String(i.cdObj), rotulo: i.nome }));
 
 export async function consultarCentralF6PGI6(
   filtro: FiltroCentral,
@@ -37,10 +43,6 @@ export async function consultarCentralF6PGI6(
     usuario.cdUsrTopManager,
   );
 
-  const combo = (lista: { cdObj: number; nome: string }[]) =>
-    lista.map((i) => ({ valor: String(i.cdObj), rotulo: i.nome }));
-
-  /* Resumo nunca mistura rascunho: em "rascunhos" ele é omitido */
   const [analises, total, lotes, tipos, silos, resumo] = await Promise.all([
     service.listar(f),
     service.contar(f),
@@ -52,7 +54,20 @@ export async function consultarCentralF6PGI6(
       : service.resumo({ ...f, status: "concluida" }),
   ]);
 
-  /* Período efetivamente aplicado — a UI mostra isso ao usuário */
+  /*
+   * Impacto e referência só fazem sentido em análises concluídas.
+   * Em rascunhos o operador está montando a análise — não há estatística.
+   */
+  const competencia = f.dtInicial ?? f.dtFinal;
+  const [impacto, referencias] = await Promise.all([
+    status === "concluida" && competencia
+      ? consultarImpactoF6PGI6(competencia)
+      : Promise.resolve(null),
+    status === "concluida"
+      ? consultarReferenciasF6PGI6()
+      : Promise.resolve([]),
+  ]);
+
   const periodo =
     status === "rascunho"
       ? "Todos os rascunhos"
@@ -61,7 +76,7 @@ export async function consultarCentralF6PGI6(
         : `${formatarDataBR(f.dtInicial ?? "")} a ${formatarDataBR(f.dtFinal ?? "")}`;
 
   return {
-    itens: analises.map((a) => ({
+    itens: analises.map((a: AnaliseF6PGI6) => ({
       id: a.id,
       titulo: a.tipoNome ?? "—",
       status: statusDoCard(a.status),
@@ -82,7 +97,10 @@ export async function consultarCentralF6PGI6(
       ],
     })),
     total,
-    lotes: lotes.map((l) => ({ valor: String(l.id), rotulo: l.nome })),
+    lotes: lotes.map((l: { id: number; nome: string }) => ({
+      valor: String(l.id),
+      rotulo: l.nome,
+    })),
     tipos: combo(tipos),
     silos: combo(silos),
     origens: [],
@@ -92,10 +110,14 @@ export async function consultarCentralF6PGI6(
       label: `${r.tipoNome ?? "—"} · ${r.loteNome ?? "—"}`,
       valor: `${num(r.consumototal)} (${r.qtdSilos} silos)`,
     })),
+    impacto,
+    referencias,
   };
 }
 
-export async function carregarF6PGI6(id: number): Promise<DetalheAnalise | null> {
+export async function carregarF6PGI6(
+  id: number,
+): Promise<DetalheAnalise | null> {
   const usuario = await getUsuarioAtual();
   if (!usuario) throw new Error("Sessão expirada.");
   await requirePermission(PERMISSIONS.ANALISES_VIEW);
@@ -121,13 +143,25 @@ export async function carregarF6PGI6(id: number): Promise<DetalheAnalise | null>
         label: "Modo de medição",
         valor: a.modoMedicao === "produto" ? "Produto" : "Vazio",
       },
+      {
+        label: "Competência",
+        valor: a.competencia ? formatarDataBR(a.competencia) : "—",
+      },
     ],
     grupos: [
       {
         titulo: "Leituras",
         itens: [
-          { label: "Vazio inicial (m)", valor: num(a.vazioInicial) },
-          { label: "Vazio final (m)", valor: num(a.vazioFinal) },
+          {
+            label: "Leitura inicial",
+            valor: `${formatarDataBR(a.data)}${a.hora ? ` · ${a.hora}` : ""} · ${num(a.vazioInicial)} m`,
+          },
+          {
+            label: "Leitura final",
+            valor: a.dataFinal
+              ? `${formatarDataBR(a.dataFinal)}${a.horaFinal ? ` · ${a.horaFinal}` : ""} · ${num(a.vazioFinal)} m`
+              : "—",
+          },
         ],
       },
       {
@@ -149,16 +183,17 @@ export async function carregarF6PGI6(id: number): Promise<DetalheAnalise | null>
     ],
     dadosIniciais: {
       id: a.id,
-      data: a.data,
-      hora: a.hora,
+      dataInicial: a.data,
+      horaInicial: a.hora,
+      dataFinal: a.dataFinal ?? undefined,
+      horaFinal: a.horaFinal ?? undefined,
       loteId: a.loteId,
       tipoId: a.tipoId,
       siloId: a.siloId,
       modoMedicao: a.modoMedicao,
-      competencia: a.competencia ?? undefined,
       vazioInicial: a.vazioInicial,
       vazioFinal: a.vazioFinal,
       status: statusDoCard(a.status),
     },
   };
-} 
+}

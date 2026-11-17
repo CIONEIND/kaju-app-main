@@ -35,9 +35,10 @@ function toAnalise(row: Record<string, unknown>): AnaliseF6PGI6 {
     id: row.ID as number,
     data: (row.Data as string) ?? "",
     hora: (row.Hora as string) ?? "",
+    dataFinal: s(row.DataFinal),
+    horaFinal: s(row.HoraFinal),
     responsavelCdUsr: n(row.Responsavel),
     responsavelNome: s(row.ResponsavelNome),
-    /* 0 = rascunho · 1 = concluída */
     status: Number(row.Status ?? 1),
     loteId: n(row.Lote),
     loteNome: s(row.LoteNome),
@@ -45,7 +46,6 @@ function toAnalise(row: Record<string, unknown>): AnaliseF6PGI6 {
     siloNome: s(row.SiloNome),
     tipoId: n(row.Tipo),
     tipoNome: s(row.TipoNome),
-
     vazioInicial: n(row.VazioInicial),
     vazioFinal: n(row.VazioFinal),
     competencia: s(row.Competencia),
@@ -74,8 +74,10 @@ export default class CioneF6PGI6Repository {
       .leftJoin("CIONE_LotesSemanais as LS", "LS.Id", "C.Lote")
       .select(
         "C.ID",
-        tsx.raw("CONVERT(varchar(10), C.DATAHORA, 120) as Data"),
-        tsx.raw("CONVERT(varchar(5), C.DATAHORA, 108) as Hora"),
+        tsx.raw("CONVERT(varchar(10), C.DataHoraInicial, 120) as Data"),
+        tsx.raw("CONVERT(varchar(5), C.DataHoraInicial, 108) as Hora"),
+        tsx.raw("CONVERT(varchar(10), C.DataHoraFinal, 120) as DataFinal"),
+        tsx.raw("CONVERT(varchar(5), C.DataHoraFinal, 108) as HoraFinal"),
         "C.Responsavel",
         "C.Lote",
         "C.Silo",
@@ -103,10 +105,10 @@ export default class CioneF6PGI6Repository {
     filtro: FiltroAnaliseF6PGI6,
   ) {
     if (filtro.dtInicial) {
-      q.whereRaw("CAST(C.DATAHORA AS date) >= ?", [filtro.dtInicial]);
+      q.whereRaw("CAST(C.DataHoraInicial AS date) >= ?", [filtro.dtInicial]);
     }
     if (filtro.dtFinal) {
-      q.whereRaw("CAST(C.DATAHORA AS date) <= ?", [filtro.dtFinal]);
+      q.whereRaw("CAST(C.DataHoraInicial AS date) <= ?", [filtro.dtFinal]);
     }
     if (filtro.loteId !== undefined) q.where("C.Lote", filtro.loteId);
     if (filtro.tipoId !== undefined) q.where("C.Tipo", filtro.tipoId);
@@ -120,7 +122,7 @@ export default class CioneF6PGI6Repository {
   ): Promise<AnaliseF6PGI6[]> {
     const q = this.baseQuery(tsx);
     this.aplicarFiltros(q, filtro);
-    q.orderBy("C.DATAHORA", "desc").orderBy("C.ID", "desc");
+    q.orderBy("C.DataHoraInicial", "desc").orderBy("C.ID", "desc");
     if (filtro.limite) q.limit(filtro.limite);
     if (filtro.offset) q.offset(filtro.offset);
     const rows = await q;
@@ -143,6 +145,34 @@ export default class CioneF6PGI6Repository {
   ): Promise<AnaliseF6PGI6 | null> {
     const row = await this.baseQuery(tsx).where("C.ID", id).first();
     return row ? toAnalise(row) : null;
+  }
+
+  /**
+   * Rascunho aberto de um silo — evita duplicar a abertura automática.
+   * "Aberto" = Status 0 (rascunho) e VazioFinal nulo.
+   */
+  static async buscarRascunhoAberto(
+    siloCdObj: number,
+    tipoAnaliseCdObj?: number,
+    tsx: Knex = this.db,
+  ): Promise<{ id: number; competencia: string | null } | null> {
+    const q = tsx
+      .withSchema(SCHEMA)
+      .table(TABELA)
+      .select(
+        "ID as id",
+        tsx.raw("CONVERT(varchar(10), Competencia, 120) as competencia"),
+      )
+      .where("Silo", siloCdObj)
+      .where("Status", 0)
+      .whereNull("VazioFinal");
+
+    if (tipoAnaliseCdObj !== undefined) {
+      q.where("Tipo", tipoAnaliseCdObj);
+    }
+
+    const row = await q.orderBy("ID", "desc").first();
+    return row ?? null;
   }
 
   /** SUM(PesoConsumido) por Tipo + Lote */

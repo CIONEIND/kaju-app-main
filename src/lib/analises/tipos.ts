@@ -1,9 +1,26 @@
+import type { GeometriaSilo, ModoMedicao } from "./calculo-silo";
+import type { TabelaReferencia } from "./referencia-silo";
+
 export type StatusAnalise = "concluida" | "rascunho";
-export type ModoMedicao = "vazio" | "produto";
 
 export interface OpcaoCombo {
   valor: string;
   rotulo: string;
+}
+
+/** Silo com a geometria vigente — usada pelo painel ao vivo */
+export interface OpcaoSilo extends OpcaoCombo {
+  tipoSilo: string;
+  alturaUtil: number;
+  geometria: GeometriaSilo;
+}
+
+export interface FiltrosDisponiveis {
+  periodo?: boolean;
+  lote?: boolean;
+  tipo?: boolean;
+  silo?: boolean;
+  origem?: boolean;
 }
 
 export interface FiltroCentral {
@@ -14,6 +31,8 @@ export interface FiltroCentral {
   tipoId?: number;
   siloId?: number;
   origemId?: number;
+  /** Tipo de silo (I, II, III) — usado pela tabela de referência */
+  tipoSilo?: string;
   /** Interno: injetado pela action ao filtrar rascunhos. Nunca vem da URL. */
   responsavelCdUsr?: number;
   limite?: number;
@@ -41,40 +60,81 @@ export interface DetalheAnalise {
 
 export interface DadosIniciaisAnalise {
   id?: number;
-  data?: string;
-  hora?: string;
   loteId?: number | null;
   tipoId?: number | null;
   siloId?: number | null;
   origemId?: number | null;
-  // F3PGI6
+  modoMedicao?: ModoMedicao;
+
+  dataInicial?: string;
+  horaInicial?: string;
+  vazioInicial?: number | null;
+
+  dataFinal?: string;
+  horaFinal?: string;
+  vazioFinal?: number | null;
+
   t1Amendoa?: number | null;
   t2Amendoa?: number | null;
   t3Amendoa?: number | null;
   t1Casca?: number | null;
   t2Casca?: number | null;
   t3Casca?: number | null;
-  // F6PGI6
-  /** Nível de vazio no início do ciclo, em metros */
-  vazioInicial?: number | null;
-  /** Nível de vazio no fim do ciclo, em metros */
-  vazioFinal?: number | null;
-  /** 0 = vazio · 1 = produto */
-  modoMedicao?: ModoMedicao | null;
-  competencia?: string | null;
-  // LCC
+
   viscosidade?: number | null;
   altura?: number | null;
   temperatura?: number | null;
+
   status?: StatusAnalise;
 }
 
 export interface OpcoesFormulario {
   lotes: OpcaoCombo[];
   tipos: OpcaoCombo[];
-  silos?: OpcaoCombo[];
+  silos?: OpcaoSilo[];
   origens?: OpcaoCombo[];
 }
+
+/* ── Impacto nas estatísticas (item 6) ─────────────────────── */
+
+export interface ImpactoTipo {
+  tipoId: number;
+  tipoNome: string;
+  volume: number;
+  peso: number;
+  /** Participação percentual no total geral (0-100) */
+  participacao: number;
+}
+
+export interface ImpactoDia {
+  /** Data em formato ISO (yyyy-mm-dd) */
+  data: string;
+  /** Data já formatada em dd/mm/aaaa */
+  dataBR: string;
+  volume: number;
+  peso: number;
+  /** Tipos processados naquele dia */
+  tipos: { tipoNome: string; volume: number; peso: number }[];
+}
+
+export interface ImpactoEstatisticas {
+  /** Período do filtro, já formatado em dd/mm/aaaa */
+  periodo: string;
+  /** Todos os tipos processados no período, ordenados por volume desc */
+  tipos: ImpactoTipo[];
+  /** Apenas os dias com produção, em ordem crescente */
+  dias: ImpactoDia[];
+  totalGeral: { volume: number; peso: number };
+  abertura: { volume: number; peso: number; vazio: number };
+  /** true quando o período tem mais de um dia — muda o rótulo para "acumulado" */
+  acumulado: boolean;
+  /** Quantos dias do intervalo tiveram produção */
+  diasComProducao: number;
+  /** Quantos dias o intervalo tem no total */
+  diasNoPeriodo: number;
+}
+
+/* ── Resultado da central ──────────────────────────────────── */
 
 export interface ResultadoCentral {
   itens: CardAnaliseDados[];
@@ -85,16 +145,10 @@ export interface ResultadoCentral {
   origens?: OpcaoCombo[];
   resumos?: { label: string; valor: string }[];
   status?: StatusAnalise;
-  /** Período efetivamente aplicado, já formatado para exibição */
   periodo?: string;
-}
-
-export interface FiltrosDisponiveis {
-  periodo?: boolean;
-  lote?: boolean;
-  tipo?: boolean;
-  silo?: boolean;
-  origem?: boolean;
+  impacto?: ImpactoEstatisticas | null;
+  /** Tabelas de referência de todos os tipos de silo (I a VII) */
+  referencias?: TabelaReferencia[];
 }
 
 export interface FormularioBaseProps {
@@ -104,6 +158,6 @@ export interface FormularioBaseProps {
   usuario: { nome: string; cdUsrTopManager: number | null };
   lotes: OpcaoCombo[];
   tipos: OpcaoCombo[];
-  silos?: OpcaoCombo[];
+  silos?: OpcaoSilo[];
   origens?: OpcaoCombo[];
 }

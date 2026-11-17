@@ -1,36 +1,49 @@
 import { z } from "zod";
 
-/** Nível em metros, até 2 casas decimais, como na planilha */
 const nivel = z
   .number()
   .min(0, "O nível não pode ser negativo")
   .refine(
-    (v) => Math.round(v * 100) === v * 100,
+    (v) => Math.abs(v * 100 - Math.round(v * 100)) <= 1e-9,
     "O nível deve ter no máximo 2 casas decimais",
   )
   .nullable()
   .optional();
 
+const dataISO = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida");
+const horaHHmm = z
+  .string()
+  .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Hora inválida (use HH:mm)");
+
 export const salvarAnaliseF6PGI6Schema = z
   .object({
-    data: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida"),
-    hora: z
-      .string()
-      .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Hora inválida (use HH:mm)")
-      .optional(),
     responsavelCdUsr: z.number().int().positive("Responsável inválido"),
     status: z.enum(["rascunho", "concluida"]).optional(),
     loteId: z.number().int().positive("Selecione o lote"),
     siloId: z.number().int().positive("Selecione o silo"),
     tipoId: z.number().int().positive("Selecione o tipo"),
-    competencia: z
-      .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/, "Competência inválida")
-      .optional(),
     modoMedicao: z.enum(["vazio", "produto"]).default("vazio"),
+
+    /* Leitura inicial */
+    dataInicial: dataISO,
+    horaInicial: horaHHmm.optional(),
     vazioInicial: nivel,
+
+    /* Leitura final */
+    dataFinal: dataISO.optional(),
+    horaFinal: horaHHmm.optional(),
     vazioFinal: nivel,
   })
+  .refine(
+    (d) =>
+      !d.dataFinal ||
+      new Date(`${d.dataFinal}T${d.horaFinal ?? "00:00"}:00`) >=
+        new Date(`${d.dataInicial}T${d.horaInicial ?? "00:00"}:00`),
+    {
+      message: "A leitura final não pode ser anterior à leitura inicial.",
+      path: ["dataFinal"],
+    },
+  )
   .refine(
     (d) =>
       d.vazioInicial === null ||

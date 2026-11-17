@@ -33,7 +33,21 @@ const SITUACOES: { valor: StatusAnalise; rotulo: string }[] = [
     { valor: "rascunho", rotulo: "Rascunhos" },
 ];
 
+/** Data de hoje no formato ISO (yyyy-mm-dd), no fuso local */
+function hojeISO(): string {
+    const d = new Date();
+    const p = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
 export function FiltrosAnalises(p: FiltrosAnalisesProps) {
+    /* Período efetivo: o que veio da URL ou o padrão (hoje) */
+    const periodoInicial = p.dtInicial ?? hojeISO();
+    const periodoFinal = p.dtFinal ?? hojeISO();
+
+    const [dtInicial, setDtInicial] = useState(periodoInicial);
+    const [dtFinal, setDtFinal] = useState(periodoFinal);
+
     const [lote, setLote] = useState(p.loteId ? String(p.loteId) : "");
     const [tipo, setTipo] = useState(p.tipoId ? String(p.tipoId) : "");
     const [silo, setSilo] = useState(p.siloId ? String(p.siloId) : "");
@@ -68,7 +82,7 @@ export function FiltrosAnalises(p: FiltrosAnalisesProps) {
             method="get"
         >
             {/* Valores dos comboboxes e da situação viajam como hidden:
-          o Combobox é controlado e não expõe atributo name. */}
+                o Combobox é controlado e não expõe atributo name. */}
             <input name="status" type="hidden" value={status} />
             {p.disponiveis.lote && <input name="lote" type="hidden" value={lote} />}
             {p.disponiveis.tipo && <input name="tipo" type="hidden" value={tipo} />}
@@ -85,8 +99,8 @@ export function FiltrosAnalises(p: FiltrosAnalisesProps) {
                     {SITUACOES.map((s) => (
                         <button
                             className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${status === s.valor
-                                    ? "bg-accent text-white"
-                                    : "text-muted hover:text-foreground"
+                                ? "bg-accent text-white"
+                                : "text-muted hover:text-foreground"
                                 }`}
                             key={s.valor}
                             onClick={() => setStatus(s.valor)}
@@ -109,10 +123,11 @@ export function FiltrosAnalises(p: FiltrosAnalisesProps) {
                         </label>
                         <input
                             className={campo}
-                            defaultValue={p.dtInicial ?? ""}
                             id="dt"
                             name="dt"
+                            onChange={(e) => setDtInicial(e.target.value)}
                             type="date"
+                            value={dtInicial}
                         />
                     </div>
                     <div>
@@ -124,10 +139,11 @@ export function FiltrosAnalises(p: FiltrosAnalisesProps) {
                         </label>
                         <input
                             className={campo}
-                            defaultValue={p.dtFinal ?? ""}
                             id="ate"
                             name="ate"
+                            onChange={(e) => setDtFinal(e.target.value)}
                             type="date"
+                            value={dtFinal}
                         />
                     </div>
                 </>

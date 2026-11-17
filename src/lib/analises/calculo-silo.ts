@@ -61,7 +61,8 @@ export function arredondar(valor: number, casas = 2): number {
 }
 
 export function validarCasasDecimais(valor: number): void {
-  if (Math.round(valor * 100) !== valor * 100) {
+  const escalado = valor * 100;
+  if (Math.abs(escalado - Math.round(escalado)) > 1e-9) {
     throw new ErroCalculoSilo(
       "O nível deve ter no máximo 2 casas decimais.",
       "CASAS_DECIMAIS",

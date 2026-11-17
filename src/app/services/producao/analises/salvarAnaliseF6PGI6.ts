@@ -10,20 +10,30 @@ const service = new CioneF6PGI6Service();
 export interface SalvarAnaliseF6PGI6Input {
   id?: number;
   status?: "rascunho" | "concluida";
-  data: string;
-  hora?: string;
   responsavelCdUsr: number;
   loteId: number;
   siloId: number;
   tipoId: number;
   modoMedicao?: "vazio" | "produto";
-  competencia?: string;
+
+  /* Leitura inicial */
+  dataInicial: string;
+  horaInicial?: string;
   vazioInicial?: number | null;
+
+  /* Leitura final */
+  dataFinal?: string;
+  horaFinal?: string;
   vazioFinal?: number | null;
 }
 
 export type SalvarAnaliseF6PGI6Result =
-  | { ok: true; id: number }
+  | {
+      ok: true;
+      id: number;
+      proximaAnaliseId: number | null;
+      proximaCompetencia: string | null;
+    }
   | { ok: false; erro: string };
 
 export async function salvarAnaliseF6PGI6(
@@ -36,24 +46,29 @@ export async function salvarAnaliseF6PGI6(
 
     const dto = {
       status: input.status ?? "concluida",
-      data: input.data,
-      hora: input.hora,
       responsavelCdUsr: input.responsavelCdUsr,
       loteId: input.loteId,
       siloId: input.siloId,
       tipoId: input.tipoId,
       modoMedicao: input.modoMedicao ?? "vazio",
-      competencia: input.competencia,
+      dataInicial: input.dataInicial,
+      horaInicial: input.horaInicial,
       vazioInicial: input.vazioInicial ?? null,
+      dataFinal: input.dataFinal,
+      horaFinal: input.horaFinal,
       vazioFinal: input.vazioFinal ?? null,
     };
 
-    if (input.id) {
-      await service.atualizar(input.id, dto);
-      return { ok: true, id: input.id };
-    }
-    const id = await service.criar(dto);
-    return { ok: true, id };
+    const resultado = input.id
+      ? await service.atualizar(input.id, dto)
+      : await service.criar(dto);
+
+    return {
+      ok: true,
+      id: resultado.id,
+      proximaAnaliseId: resultado.proximaAnaliseId,
+      proximaCompetencia: resultado.proximaCompetencia,
+    };
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Erro ao salvar a análise.";
     return { ok: false, erro: msg };

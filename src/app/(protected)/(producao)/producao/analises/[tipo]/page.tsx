@@ -3,7 +3,9 @@ import { FORMULARIOS } from "@/app/services/producao/analises/registry";
 import { FiltrosAnalises } from "@/components/producao/analises/FiltrosAnalises";
 import { ListaAnalises } from "@/components/producao/analises/ListaAnalises";
 import { Paginacao } from "@/components/producao/analises/Paginacao";
+import { SecaoImpacto } from "@/components/producao/analises/SecaoImpacto";
 import { SeletorFormulario } from "@/components/producao/analises/SeletorFormulario";
+import { TabelaReferenciaSilo } from "@/components/producao/analises/TabelaReferenciaSilo";
 import { isTipoFormulario } from "@/lib/analises/registro";
 import type { StatusAnalise } from "@/lib/analises/tipos";
 import { getUsuarioAtual } from "@/lib/auth/auth";
@@ -18,10 +20,6 @@ function texto(v: string | string[] | undefined): string | undefined {
     return typeof s === "string" && s.trim() !== "" ? s.trim() : undefined;
 }
 
-/**
- * Converte para inteiro positivo.
- * `Number("")` retorna 0 e `Number("abc")` retorna NaN — os dois caem no guarda.
- */
 function numero(v: string | string[] | undefined): number | undefined {
     const s = texto(v);
     if (s === undefined) return undefined;
@@ -31,6 +29,18 @@ function numero(v: string | string[] | undefined): number | undefined {
 
 function situacao(v: string | string[] | undefined): StatusAnalise {
     return texto(v) === "rascunho" ? "rascunho" : "concluida";
+}
+
+function hojeISO(): string {
+    const d = new Date();
+    const p = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+function dataISO(v: string | string[] | undefined): string | undefined {
+    const s = texto(v);
+    if (s === undefined) return undefined;
+    return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : undefined;
 }
 
 export default async function CentralTipoPage({
@@ -49,19 +59,22 @@ export default async function CentralTipoPage({
     if (!isTipoFormulario(tipo)) notFound();
 
     const q = await searchParams;
-    const dtInicial = texto(q.dt);
-    const dtFinal = texto(q.ate);
+    const status = situacao(q.status);
+
+    const hoje = hojeISO();
+    const dtInicial = status === "rascunho" ? undefined : (dataISO(q.dt) ?? hoje);
+    const dtFinal = status === "rascunho" ? undefined : (dataISO(q.ate) ?? hoje);
+
     const loteId = numero(q.lote);
     const tipoId = numero(q.tipo);
     const siloId = numero(q.silo);
     const origemId = numero(q.origem);
-    const status = situacao(q.status);
     const pagina = Math.max(1, numero(q.pagina) ?? 1);
 
     const meta = FORMULARIOS[tipo];
     const basePath = `/producao/analises/${tipo}`;
 
-    const { itens, total, lotes, tipos, silos, origens, resumos } =
+    const { itens, total, lotes, tipos, silos, origens, impacto, referencias } =
         await meta.consultar({
             dtInicial,
             dtFinal,
@@ -124,21 +137,7 @@ export default async function CentralTipoPage({
                 tipos={tipos}
             />
 
-            {resumos && resumos.length > 0 && (
-                <div className="flex flex-wrap gap-3">
-                    {resumos.map((r) => (
-                        <div
-                            className="rounded-xl border border-border bg-surface px-4 py-3"
-                            key={r.label}
-                        >
-                            <p className="text-[11px] font-medium uppercase tracking-wide text-muted">
-                                {r.label}
-                            </p>
-                            <p className="text-lg font-semibold text-foreground">{r.valor}</p>
-                        </div>
-                    ))}
-                </div>
-            )}
+            {impacto && <SecaoImpacto dados={impacto} />}
 
             <p className="text-sm text-muted">
                 {total === 0
@@ -153,6 +152,10 @@ export default async function CentralTipoPage({
                 totalPaginas={totalPaginas}
                 urlComPagina={urlComPagina}
             />
+
+            {referencias && referencias.length > 0 && (
+                <TabelaReferenciaSilo tabelas={referencias} tipoInicial="I" />
+            )}
         </main>
     );
 }

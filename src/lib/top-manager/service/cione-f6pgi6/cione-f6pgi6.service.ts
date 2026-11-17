@@ -13,6 +13,11 @@ import {
   ErroCalculoSilo,
   type ResultadoCalculo,
 } from "@/lib/analises/calculo-silo";
+import {
+  atravessouMeiaNoite,
+  montarAbertura,
+  somarDias,
+} from "@/lib/analises/competencia";
 
 function toSqlDateTime(data: string, hora?: string): string {
   return `${data} ${hora ?? "00:00"}:00`;
@@ -23,6 +28,13 @@ function escala(valor: number | null, casas: number): number | null {
   if (valor === null) return null;
   const fator = 10 ** casas;
   return Math.round(valor * fator) / fator;
+}
+
+/** Resultado de um salvamento, com a próxima análise quando houver */
+export interface ResultadoSalvar {
+  id: number;
+  proximaAnaliseId: number | null;
+  proximaCompetencia: string | null;
 }
 
 export default class CioneF6PGI6Service {
@@ -56,6 +68,18 @@ export default class CioneF6PGI6Service {
     return CioneF6PGI6Repository.listarSilos(tsx);
   }
 
+  buscarRascunhoAberto(
+    siloCdObj: number,
+    tipoAnaliseCdObj?: number,
+    tsx: Knex = this.db,
+  ) {
+    return CioneF6PGI6Repository.buscarRascunhoAberto(
+      siloCdObj,
+      tipoAnaliseCdObj,
+      tsx,
+    );
+  }
+
   private validar(dto: SalvarAnaliseF6PGI6SchemaType) {
     const v = salvarAnaliseF6PGI6Schema.safeParse(dto);
     if (!v.success) {
@@ -64,7 +88,7 @@ export default class CioneF6PGI6Service {
     return v.data;
   }
 
- /** 0 = rascunho · 1 = concluída */
+  /** 0 = rascunho · 1 = concluída */
   private statusNum(s?: "rascunho" | "concluida"): number {
     return s === "rascunho" ? 0 : 1;
   }
@@ -79,12 +103,12 @@ export default class CioneF6PGI6Service {
    * nas duas leituras do ciclo, devolvendo as colunas calculadas.
    */
   private async calcularCiclo(v: SalvarAnaliseF6PGI6SchemaType) {
-    const data = new Date(`${v.data}T${v.hora ?? "00:00"}:00`);
-    const { geometria, peso } = await buscarParametrosAnalise(
-      v.siloId,
-      v.tipoId,
-      data,
-    );
+  const data = new Date(`${v.dataInicial}T${v.horaInicial ?? "00:00"}:00`);
+  const { geometria, peso } = await buscarParametrosAnalise(
+    v.siloId,
+    v.tipoId,
+    data,
+  );
 
     const temInicial = v.vazioInicial !== null && v.vazioInicial !== undefined;
     const temFinal = v.vazioFinal !== null && v.vazioFinal !== undefined;
@@ -122,9 +146,8 @@ export default class CioneF6PGI6Service {
     };
   }
 
-  private async montarLinha(v: SalvarAnaliseF6PGI6SchemaType) {
+private async montarLinha(v: SalvarAnaliseF6PGI6SchemaType) {
     let calculo: Awaited<ReturnType<typeof this.calcularCiclo>>;
-
     try {
       calculo = await this.calcularCiclo(v);
     } catch (e) {
@@ -133,36 +156,129 @@ export default class CioneF6PGI6Service {
     }
 
     return {
-      DATAHORA: toSqlDateTime(v.data, v.hora) as unknown as Date,
+      DataHoraInicial: toSqlDateTime(v.dataInicial, v.horaInicial) as unknown as Date,
+      DataHoraFinal: v.dataFinal
+        ? (toSqlDateTime(v.dataFinal, v.horaFinal) as unknown as Date)
+        : null,
       Responsavel: v.responsavelCdUsr,
       Lote: v.loteId,
       Silo: v.siloId,
       Tipo: v.tipoId,
       VazioInicial: v.vazioInicial ?? null,
       VazioFinal: v.vazioFinal ?? null,
-      Competencia: (v.competencia ?? v.data) as unknown as Date,
+      Competencia: v.dataInicial as unknown as Date,
       ModoMedicao: this.modoNum(v.modoMedicao),
       Status: this.statusNum(v.status),
       ...calculo,
     };
   }
 
-  async criar(dto: SalvarAnaliseF6PGI6SchemaType, tsx: Knex = this.db) {
+  /**
+   * Abre a próxima análise em rascunho quando a leitura final
+   * atravessa a meia-noite. A leitura inicial é herdada da final,
+   * para que o saldo do silo continue com consumo registrado.
+   *
+   * Não abre quando:
+   * - a análise ainda é rascunho;
+   * - não há leitura final;
+   * - a leitura final não cruzou a meia-noite;
+   * - já existe um rascunho aberto para o mesmo silo e tipo.
+   */
+  private async abrirProximaSeNecessario(
+    v: SalvarAnaliseF6PGI6SchemaType,
+    tsx: Knex,
+  ): Promise<{ id: number; competencia: string } | null> {
+    if (v.status === "rascunho") return null;
+    if (v.vazioFinal === null || v.vazioFinal === undefined) return null;
+
+    const cruzou = atravessouMeiaNoite(
+      v.dataInicial,
+      v.horaInicial,
+      v.dataFinal ?? v.dataInicial,
+      v.horaFinal,
+    );
+    if (!cruzou) return null;
+
+    /* Já existe uma próxima aberta para este silo e tipo? Não duplica */
+    const existente = await CioneF6PGI6Repository.buscarRascunhoAberto(
+      v.siloId,
+      v.tipoId,
+      tsx,
+    );
+    if (existente) {
+      return {
+        id: existente.id,
+        competencia: existente.competencia ?? somarDias(v.dataInicial, 1),
+      };
+    }
+
+    const abertura = montarAbertura(
+      v.dataInicial,
+      v.horaInicial,
+      v.vazioFinal,
+      v.modoMedicao,
+    );
+
+    const proximoId = await CioneF6PGI6Repository.inserir(
+      {
+        DataHoraInicial: abertura.data + " " + abertura.hora as unknown as Date,
+        DataHoraFinal: null,
+        Responsavel: v.responsavelCdUsr,
+        Lote: v.loteId,
+        Silo: v.siloId,
+        Tipo: v.tipoId,
+        VazioInicial: abertura.vazioInicial,
+        VazioFinal: null,
+        Competencia: abertura.competencia as unknown as Date,
+        ModoMedicao: this.modoNum(abertura.modoMedicao),
+        VolumeInicial: null,
+        VolumeFinal: null,
+        PesoInicial: null,
+        PesoFinal: null,
+        VolumeConsumido: null,
+        PesoConsumido: null,
+        Status: 0,
+      },
+      tsx,
+    );
+
+    return { id: proximoId, competencia: abertura.competencia };
+  }
+
+  async criar(
+    dto: SalvarAnaliseF6PGI6SchemaType,
+    tsx: Knex = this.db,
+  ): Promise<ResultadoSalvar> {
     const v = this.validar(dto);
     const linha = await this.montarLinha(v);
-    return CioneF6PGI6Repository.inserir(linha, tsx);
+    const id = await CioneF6PGI6Repository.inserir(linha, tsx);
+
+    const proxima = await this.abrirProximaSeNecessario(v, tsx);
+
+    return {
+      id,
+      proximaAnaliseId: proxima?.id ?? null,
+      proximaCompetencia: proxima?.competencia ?? null,
+    };
   }
 
   async atualizar(
     id: number,
     dto: SalvarAnaliseF6PGI6SchemaType,
     tsx: Knex = this.db,
-  ) {
+  ): Promise<ResultadoSalvar> {
     const v = this.validar(dto);
     const linha = await this.montarLinha(v);
 
     const afetadas = await CioneF6PGI6Repository.atualizar(id, linha, tsx);
     if (!afetadas) throw new Error("Análise não encontrada.");
-    return afetadas;
+
+    const proxima = await this.abrirProximaSeNecessario(v, tsx);
+
+    return {
+      id,
+      proximaAnaliseId: proxima?.id ?? null,
+      proximaCompetencia: proxima?.competencia ?? null,
+    };
   }
 }

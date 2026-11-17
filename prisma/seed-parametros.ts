@@ -1,5 +1,3 @@
-/* prisma/seed-parametros.ts */
-
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
 
@@ -16,23 +14,23 @@ const prisma = new PrismaClient({
 });
 
 /* ── Geometria comum a todos os tipos (aba BD) ─────────────── */
-/* D = 1,9 m · d = 0,25 m · x = (D − d) / 2 = 0,825 m          */
+/* D = 1,9 m · d = 0,25 m · x = 1,00 m (valor da planilha)     */
 const GEOMETRIA = {
   diametro: 1.9,
   areaBaseMaior: 2.835284975,
   areaBaseMenor: 0.04908734375,
-  alturaTronco: 1,        // ← era 0.825
+  alturaTronco: 1,
 };
 
 /* ── Alturas úteis por tipo (aba BD, linha 4) ──────────────── */
 const ALTURAS: Record<string, number> = {
-  I: 3.97,
-  II: 4.02,
-  III: 4.65,
-  IV: 4.68,
-  V: 5.08,
-  VI: 5.1,
-  VII: 5.15,
+  I: 4.97,
+  II: 5.02,
+  III: 5.65,
+  IV: 5.68,
+  V: 6.08,
+  VI: 6.1,
+  VII: 6.15,
 };
 
 /* ── Silos por tipo (abas Silos I a VII) ───────────────────── */
@@ -77,8 +75,9 @@ const PESOS: Record<number, number> = {
 const SAFRA = "2026/2027";
 const INICIO = new Date("2026-01-01T00:00:00Z");
 
-async function seedParametroSilo(): Promise<number> {
+async function seedParametroSilo(): Promise<{ criados: number; atualizados: number }> {
   let criados = 0;
+  let atualizados = 0;
 
   for (const [tipo, silos] of Object.entries(SILOS_POR_TIPO)) {
     const alturaUtil = ALTURAS[tipo];
@@ -92,12 +91,29 @@ async function seedParametroSilo(): Promise<number> {
         throw new Error(`Silo ${numero} sem CdObj mapeado`);
       }
 
-      /* Idempotência: só cria se não houver geometria vigente */
       const vigente = await prisma.parametroSilo.findFirst({
         where: { siloCdObj, vigenciaFim: null },
-        select: { id: true },
+        select: { id: true, alturaUtil: true },
       });
-      if (vigente) continue;
+
+      /* Já existe e está correto: não mexe */
+      if (vigente && Number(vigente.alturaUtil) === alturaUtil) continue;
+
+      /* Existe mas está errado: corrige in-place */
+      if (vigente) {
+        await prisma.parametroSilo.update({
+          where: { id: vigente.id },
+          data: {
+            tipoSilo: tipo as never,
+            alturaUtil,
+            ...GEOMETRIA,
+            motivo: "Correção de altura útil conforme planilha de referência",
+            criadoPor: "seed-correcao",
+          },
+        });
+        atualizados++;
+        continue;
+      }
 
       await prisma.parametroSilo.create({
         data: {
@@ -114,7 +130,7 @@ async function seedParametroSilo(): Promise<number> {
     }
   }
 
-  return criados;
+  return { criados, atualizados };
 }
 
 async function seedPesoEspecifico(): Promise<number> {
@@ -153,7 +169,9 @@ async function main() {
   const totalSilos = await prisma.parametroSilo.count();
   const totalPesos = await prisma.pesoEspecifico.count();
 
-  console.log(`ParametroSilo: ${silos} criados (total ${totalSilos}).`);
+  console.log(
+    `ParametroSilo: ${silos.criados} criados, ${silos.atualizados} corrigidos (total ${totalSilos}).`,
+  );
   console.log(`PesoEspecifico: ${pesos} criados (total ${totalPesos}).`);
 }
 

@@ -156,7 +156,8 @@ export default class CioneLCCRepository {
       .withSchema(SCHEMA)
       .table("CIONE_LotesSemanais")
       .select("Id as id", "NomeLote as nome")
-      .andWhereILike("NomeLote", "%01-C%")
+      .andWhereILike("NomeLote", "%-CI%")
+      .andWhere("Ativo", 1)
       .orderBy("NomeLote", "asc");
     return rows.map((r: { id: number; nome: string | null }) => ({
       id: r.id,

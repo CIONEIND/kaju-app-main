@@ -53,7 +53,7 @@ function agora(): string {
 function media(...textos: string[]): string {
     const nums = textos.map(paraNumero).filter((n): n is number => n !== null);
     if (nums.length === 0) return "—";
-    const m = nums.reduce((a, b) => a + b, 0) / nums.length;
+    const m = nums.reduce((a, b) => a + b, 0) / nums.length + 0.5;
     return m.toLocaleString("pt-BR", {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
@@ -106,8 +106,11 @@ function GrupoMedicoes({
                 </div>
             </div>
             <div className="mt-3 flex items-center justify-between rounded-lg bg-surface-secondary px-3 py-2">
-                <span className="text-[11px] font-medium uppercase tracking-wide text-muted">
-                    Média
+                <span
+                    className="text-[11px] font-medium uppercase tracking-wide text-muted"
+                    title="Média dos três testes + 0,5 (correção do limite da máquina de análise)"
+                >
+                    Média corrigida
                 </span>
                 <span className="text-sm font-semibold text-foreground">
                     {mediaTexto}
@@ -289,7 +292,7 @@ export function FormularioF3PGI6({
             valor: `${formatarDataBR(data)}${hora ? ` · ${hora}` : ""}`,
         },
         {
-            label: "Média amêndoa",
+            label: "Média amêndoa (+0,5)",
             valor: media(
                 medicoes.t1Amendoa,
                 medicoes.t2Amendoa,
@@ -297,7 +300,7 @@ export function FormularioF3PGI6({
             ),
         },
         {
-            label: "Média casca",
+            label: "Média casca (+0,5)",
             valor: media(medicoes.t1Casca, medicoes.t2Casca, medicoes.t3Casca),
         },
     ];
@@ -428,6 +431,7 @@ export function FormularioF3PGI6({
                             medicoes.t2Amendoa,
                             medicoes.t3Amendoa,
                         ]}
+
                     />
 
                     <GrupoMedicoes
@@ -440,6 +444,7 @@ export function FormularioF3PGI6({
                         titulo="Casca"
                         valores={[medicoes.t1Casca, medicoes.t2Casca, medicoes.t3Casca]}
                     />
+
                 </div>
 
                 <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
@@ -464,9 +469,11 @@ export function FormularioF3PGI6({
             <ConfirmarSalvarModal
                 editando={editando}
                 enviando={enviando}
+                erro={erroConfirmacao}
                 onConfirmar={confirmarSalvar}
                 resumo={resumo}
                 state={confirmacao}
+                sucesso={sucessoConfirmacao}
             />
         </div>
     );

@@ -157,7 +157,7 @@ export function FormularioLCC({
                 setErroConfirmacao(r.erro);
                 return;
             }
-
+            setSucessoConfirmacao(true);
             setTimeout(() => {
                 confirmacao.close();
                 router.push(basePath);
@@ -371,10 +371,10 @@ export function FormularioLCC({
                 editando={editando}
                 enviando={enviando}
                 erro={erroConfirmacao}
-                sucesso={sucessoConfirmacao}
                 onConfirmar={confirmarSalvar}
                 resumo={resumo}
                 state={confirmacao}
+                sucesso={sucessoConfirmacao}
             />
         </div>
     );

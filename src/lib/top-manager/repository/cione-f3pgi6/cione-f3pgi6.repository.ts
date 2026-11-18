@@ -18,7 +18,7 @@ function media(
   c: number | null,
 ): number | null {
   if (a === null || b === null || c === null) return null;
-  return Math.round(((a + b + c) / 3) * 100) / 100;
+  return Math.round(((a + b + c) / 3 + 0.5) * 100) / 100;
 }
 
 function toAnalise(row: Record<string, unknown>): AnaliseF3PGI6 {
@@ -164,7 +164,8 @@ export default class CioneF3PGI6Repository {
       .withSchema(SCHEMA)
       .table("CIONE_LotesSemanais")
       .select("Id as id", "NomeLote as nome")
-      .andWhereILike("NomeLote", "%01-C%")
+      .andWhereILike("NomeLote", "%-CI%")
+      .andWhere("Ativo", 1)
       .orderBy("NomeLote", "asc");
 
     return rows.map((r: { id: number; nome: string | null }) => ({

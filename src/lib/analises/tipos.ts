@@ -168,10 +168,13 @@ export interface FormularioBaseProps {
 }
 
 export interface LinhaUmidadeF5PGI6 {
-  item: "A" | "C";
-  t1?: number | null;
-  t2?: number | null;
-  t3?: number | null;
+
+  t1Amendoa?: number | null;
+  t2Amendoa?: number | null;
+  t3Amendoa?: number | null;
+  t1Casca?: number | null;
+  t2Casca?: number | null;
+  t3Casca?: number | null;
   media?: number | null;
 }
 

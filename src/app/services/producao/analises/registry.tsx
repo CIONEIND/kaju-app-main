@@ -1,6 +1,7 @@
 import type { ComponentType } from "react";
 import { CONSULTAS } from "@/app/services/producao/analises/consultas";
 import { listarOpcoesF3PGI6 } from "@/app/services/producao/analises/listarOpcoesF3PGI6";
+import { listarOpcoesF5PGI6 } from "@/app/services/producao/analises/listarOpcoesF5PGI6";
 import { listarOpcoesF6PGI6 } from "@/app/services/producao/analises/listarOpcoesF6PGI6";
 import { listarOpcoesLCC } from "@/app/services/producao/analises/listarOpcoesLCC";
 import { REGISTRO_META, type TipoFormulario } from "@/lib/analises/registro";
@@ -11,15 +12,18 @@ import type {
 import { FormularioF3PGI6 } from "@/components/producao/analises/FormularioF3PGI6";
 import { FormularioF6PGI6 } from "@/components/producao/analises/FormularioF6PGI6";
 import { FormularioLCC } from "@/components/producao/analises/FormularioLCC";
+import { FormularioF5PGI6 } from "@/components/producao/analises/FormularioF5PGI6";
 
 const COMPONENTES: Record<TipoFormulario, ComponentType<FormularioBaseProps>> = {
     F3PGI6: FormularioF3PGI6,
+    F5PGI6: FormularioF5PGI6,
     F6PGI6: FormularioF6PGI6,
     LCC: FormularioLCC,
 };
 
 const OPCOES: Record<TipoFormulario, () => Promise<OpcoesFormulario>> = {
     F3PGI6: listarOpcoesF3PGI6,
+    F5PGI6: listarOpcoesF5PGI6,
     F6PGI6: listarOpcoesF6PGI6,
     LCC: listarOpcoesLCC,
 };

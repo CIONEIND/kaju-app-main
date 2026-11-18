@@ -5,6 +5,7 @@ import type {
 } from "@/lib/analises/tipos";
 import type { TipoFormulario } from "@/lib/analises/registro";
 import { consultarCentralF3PGI6, carregarF3PGI6 } from "./consultarCentralF3PGI6";
+import { consultarCentralF5PGI6, carregarF5PGI6 } from "./consultarCentralF5PGI6";
 import { consultarCentralF6PGI6, carregarF6PGI6 } from "./consultarCentralF6PGI6";
 import { consultarCentralLCC, carregarLCC } from "./consultarCentralLCC";
 
@@ -15,6 +16,7 @@ export interface ConsultaFormulario {
 
 export const CONSULTAS: Record<TipoFormulario, ConsultaFormulario> = {
   F3PGI6: { consultar: consultarCentralF3PGI6, carregar: carregarF3PGI6 },
+  F5PGI6: { consultar: consultarCentralF5PGI6, carregar: carregarF5PGI6 },
   F6PGI6: { consultar: consultarCentralF6PGI6, carregar: carregarF6PGI6 },
   LCC: { consultar: consultarCentralLCC, carregar: carregarLCC },
 };

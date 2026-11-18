@@ -6,6 +6,11 @@ export const REGISTRO_META = {
     descricao: "Umidade da Matéria-Prima para Processo",
     filtros: { periodo: true, lote: true, tipo: true } as FiltrosDisponiveis,
   },
+  F5PGI6: {
+    titulo: "F5PGI6",
+    descricao: "Umidade da Matéria-Prima durante o Processo",
+    filtros: { periodo: true, lote: true, tipo: true, origem: true, silo: true } as FiltrosDisponiveis,
+  },
   F6PGI6: {
     titulo: "F6PGI6",
     descricao: "Contabilização da Matéria-Prima Processada",

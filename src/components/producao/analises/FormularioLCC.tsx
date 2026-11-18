@@ -98,7 +98,7 @@ export function FormularioLCC({
         [altura, temperatura],
     );
 
-    const { salvando, ultimoSalvo, cancelar } = useRascunho({
+    const { salvando, ultimoSalvo, erro: erroRascunho, cancelar } = useRascunho({
         habilitado: podeRascunhar && !editando && !enviando,
         dados: { lote, origem, data, hora, viscosidade, altura, temperatura },
         idAtual: rascunhoId,
@@ -255,7 +255,14 @@ export function FormularioLCC({
                     Seu usuário não está vinculado a um CdUsr do TopManager.
                 </div>
             )}
-
+            {erroRascunho && (
+                <div className="mx-6 mt-4 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                    <p className="font-medium">Limite de rascunhos atingido</p>
+                    <p className="mt-0.5 text-xs">
+                        {erroRascunho}
+                    </p>
+                </div>
+            )}
             {erro && (
                 <div className="mx-6 mt-4 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800">
                     {erro}

@@ -28,7 +28,6 @@ import type {
 } from "@/lib/analises/tipos";
 import { ConfirmarSalvarModal } from "./ConfirmarSalvarModal";
 import { useRascunho } from "./useRascunho";
-import { BotaoExcluirRascunho } from "./BotaoExcluirRascunho";
 
 interface Medicoes {
     vazioInicial: string;
@@ -402,7 +401,7 @@ export function FormularioF6PGI6({
         (leituraFinal.leitura as ResultadoCalculo).volumeTotal >
         (leituraInicial.leitura as ResultadoCalculo).volumeTotal;
 
-    const { salvando, ultimoSalvo, cancelar } = useRascunho({
+    const { salvando, ultimoSalvo, erro: erroRascunho, cancelar } = useRascunho({
         habilitado: podeRascunhar && !editando && !enviando,
         dados: {
             lote,
@@ -651,7 +650,12 @@ export function FormularioF6PGI6({
                     Seu usuário não está vinculado a um CdUsr do TopManager.
                 </div>
             )}
-
+            {erroRascunho && (
+                <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                    <p className="font-medium">Limite de rascunhos atingido</p>
+                    <p className="mt-0.5 text-xs">{erroRascunho}</p>
+                </div>
+            )}
             {erro && (
                 <div className="rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800">
                     {erro}
@@ -1053,17 +1057,6 @@ export function FormularioF6PGI6({
                 </Secao>
 
                 <div className="flex items-center justify-end gap-2 rounded-xl border border-border bg-surface px-6 py-4">
-                    {/* Excluir só aparece quando já existe rascunho salvo */}
-                    {rascunhoId !== null && !editando && (
-                        <BotaoExcluirRascunho
-                            basePath={basePath}
-                            id={rascunhoId}
-                            onExcluido={() => {
-                                cancelar();
-                                limpar();
-                            }}
-                        />
-                    )}
                     <Button
                         onPress={() => (editando ? router.push(basePath) : limpar())}
                         variant="secondary"

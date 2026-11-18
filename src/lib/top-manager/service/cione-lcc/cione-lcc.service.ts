@@ -85,4 +85,10 @@ export default class CioneLCCService {
     if (!afetadas) throw new Error("Análise não encontrada.");
     return afetadas;
   }
+  async excluir(id: number, tsx: Knex = this.db): Promise<number> {
+    return CioneLCCRepository.excluir(id, tsx);
+  }
+  async contarRascunhos(cdUsr: number, tsx: Knex = this.db): Promise<number> {
+    return CioneLCCRepository.contarRascunhos(cdUsr, tsx);
+  }
 }

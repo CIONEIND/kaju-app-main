@@ -3,22 +3,27 @@
 import { getUsuarioAtual } from "@/lib/auth/auth";
 import { requirePermission } from "@/lib/rbac/access";
 import { PERMISSIONS } from "@/lib/rbac/permissions";
+import CioneF3PGI6Service from "@/lib/top-manager/service/cione-f3pgi6/cione-f3pgi6.service";
+import CioneF5PGI6Service from "@/lib/top-manager/service/cione-f5pgi6/cione-f5pgi6.service";
 import CioneF6PGI6Service from "@/lib/top-manager/service/cione-f6pgi6/cione-f6pgi6.service";
-
-const service = new CioneF6PGI6Service();
+import CioneLCCService from "@/lib/top-manager/service/cione-lcc/cione-lcc.service";
 
 export interface ResultadoExclusao {
   ok: boolean;
   erro?: string;
 }
 
-/**
- * Exclui um rascunho do próprio usuário.
- *
- * Só rascunho pode ser excluído — análise concluída é registro de produção
- * e não se apaga. Só o dono do rascunho pode excluir.
- */
-export async function excluirRascunhoF6PGI6(
+const SERVICES = {
+  F3PGI6: new CioneF3PGI6Service(),
+  F5PGI6: new CioneF5PGI6Service(),
+  F6PGI6: new CioneF6PGI6Service(),
+  LCC: new CioneLCCService(),
+} as const;
+
+export type TipoFormularioExclusao = keyof typeof SERVICES;
+
+export async function excluirRascunho(
+  tipo: TipoFormularioExclusao,
   id: number,
 ): Promise<ResultadoExclusao> {
   const usuario = await getUsuarioAtual();
@@ -29,6 +34,7 @@ export async function excluirRascunhoF6PGI6(
     return { ok: false, erro: "Usuário sem vínculo com o TopManager." };
   }
 
+  const service = SERVICES[tipo];
   const analise = await service.buscarPorId(id);
   if (!analise) return { ok: false, erro: "Rascunho não encontrado." };
 
@@ -41,7 +47,7 @@ export async function excluirRascunhoF6PGI6(
     return { ok: false, erro: "Você só pode excluir seus próprios rascunhos." };
   }
 
-    try {
+  try {
     const removidas = await service.excluir(id);
     if (removidas === 0) {
       return { ok: false, erro: "Rascunho não encontrado." };

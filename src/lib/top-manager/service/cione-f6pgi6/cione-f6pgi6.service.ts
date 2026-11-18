@@ -290,5 +290,10 @@ private async montarLinha(v: SalvarAnaliseF6PGI6SchemaType) {
    */
   async excluir(id: number, tsx: Knex = this.db): Promise<number> {
     return CioneF6PGI6Repository.excluir(id, tsx);
+  
   }
+
+  async contarRascunhos(cdUsr: number, tsx: Knex = this.db): Promise<number> {
+  return CioneF6PGI6Repository.contarRascunhos(cdUsr, tsx);
+}
 }

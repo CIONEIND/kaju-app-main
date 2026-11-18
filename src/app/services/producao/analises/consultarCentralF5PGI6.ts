@@ -10,6 +10,7 @@ import type {
   FiltroCentral,
   ResultadoCentral,
 } from "@/lib/analises/tipos";
+import { dataBR, dataHoraBR } from "@/lib/analises/data";
 
 const service = new CioneF5PGI6Service();
 
@@ -28,7 +29,7 @@ function toCard(
 ): CardAnaliseDados {
   return {
     id: a.id,
-    titulo: `Lote ${a.loteNome ?? "—"} · ${a.data} ${a.hora}`,
+    titulo: `Lote ${a.loteNome ?? "—"} · ${dataBR(a.data)} ${a.hora}`,
     status: statusDe(a.status),
     linhas: [
       { label: "Silo", valor: a.siloNome ?? "—" },
@@ -79,7 +80,7 @@ export async function carregarF5PGI6(
 
   return {
     id: a.id,
-    titulo: `F5PGI6 — ${a.data} ${a.hora}`,
+    titulo: `F5PGI6 — ${dataBR(a.data)} ${a.hora}`,
     subtitulo: `Lote ${a.loteNome ?? "—"} · ${a.siloNome ?? "—"}`,
     identificacao: [
       { label: "Lote", valor: a.loteNome ?? "—" },

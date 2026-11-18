@@ -12,7 +12,7 @@ const TABELA = "CIONE_F6PGI6";
 const SCHEMA = "dbo";
 
 /** CdObj de Tipo (mesma família usada na F3PGI6) */
-const TIPOS_CDOBJ = [52913, 52914, 52916, 52917, 53089, 53093, 53097];
+const TIPOS_CDOBJ = [52913, 52914, 52916, 52917];
 
 /** CdObjMae dos silos — o pai de todos os silos no TbObj */
 const SILOS_CDOBJ_MAE = [53115];
@@ -247,7 +247,8 @@ export default class CioneF6PGI6Repository {
       .withSchema(SCHEMA)
       .table("CIONE_LotesSemanais")
       .select("Id as id", "NomeLote as nome")
-      .andWhereILike("NomeLote", "%01-C%")
+      .whereILike("NomeLote", "%CI-BR%")
+      .orWhereILike("NomeLote", "%CH-BR%")
       .orderBy("NomeLote", "asc");
     return rows.map((r: { id: number; nome: string | null }) => ({
       id: r.id,
@@ -288,4 +289,18 @@ export default class CioneF6PGI6Repository {
   static async listarSilos(tsx: Knex = this.db) {
     return this.listarPorCdObjMae(SILOS_CDOBJ_MAE, tsx);
   }
+
+    static async contarRascunhos(
+      cdUsr: number,
+      tsx: Knex = this.db,
+    ): Promise<number> {
+      const rows = await tsx
+        .withSchema(SCHEMA)
+        .from(TABELA)
+        .where("Status", 0)
+        .where("Responsavel", cdUsr)
+        .count({ total: "*" });
+  
+      return Number(rows[0]?.total ?? 0);
+    }
 }

@@ -4,6 +4,7 @@ import { getUsuarioAtual } from "@/lib/auth/auth";
 import { requirePermission } from "@/lib/rbac/access";
 import { PERMISSIONS } from "@/lib/rbac/permissions";
 import CioneF3PGI6Service from "@/lib/top-manager/service/cione-f3pgi6/cione-f3pgi6.service";
+import { verificarLimiteRascunhos } from "./limiteRascunhos";
 
 const service = new CioneF3PGI6Service();
 
@@ -43,6 +44,16 @@ export async function salvarAnaliseF3PGI6(
     if (!input.loteId) return { ok: false, erro: "Selecione o lote." };
     if (!input.tipoId) return { ok: false, erro: "Selecione o tipo de análise." };
     if (!input.data) return { ok: false, erro: "Informe a data." };
+
+    /* Limite de rascunhos — só na criação */
+    if (input.id === undefined && (input.status ?? "concluida") === "rascunho") {
+      const limite = await verificarLimiteRascunhos((cdUsr) =>
+        service.contarRascunhos(cdUsr),
+      );
+      if (!limite.permitido) {
+        return { ok: false, erro: limite.erro ?? "Limite de rascunhos atingido." };
+      }
+    }
 
     const dto = {
       status: input.status ?? "concluida",

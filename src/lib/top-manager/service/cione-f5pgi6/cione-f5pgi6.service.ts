@@ -105,4 +105,7 @@ export default class CioneF5PGI6Service {
   async excluir(id: number, tsx: Knex = this.db): Promise<number> {
     return CioneF5PGI6Repository.excluir(id, tsx);
   }
+async contarRascunhos(cdUsr: number, tsx: Knex = this.db): Promise<number> {
+  return CioneF5PGI6Repository.contarRascunhos(cdUsr, tsx);
+}
 }

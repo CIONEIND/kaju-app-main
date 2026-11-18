@@ -6,6 +6,7 @@ import { requirePermission } from "@/lib/rbac/access";
 import { PERMISSIONS } from "@/lib/rbac/permissions";
 import CioneF5PGI6Service from "@/lib/top-manager/service/cione-f5pgi6/cione-f5pgi6.service";
 import type { SalvarAnaliseF5PGI6SchemaType } from "@/lib/top-manager/service/cione-f5pgi6/schemas";
+import { verificarLimiteRascunhos } from "./limiteRascunhos";
 
 const service = new CioneF5PGI6Service();
 
@@ -30,6 +31,16 @@ export async function salvarAnaliseF5PGI6(
 
   if (usuario.cdUsrTopManager === null) {
     return { ok: false, erro: "Usuário sem vínculo com o TopManager." };
+  }
+
+  /* Limite de rascunhos — só na criação */
+  if (!id && dto.status === "rascunho") {
+    const limite = await verificarLimiteRascunhos((cdUsr) =>
+      service.contarRascunhos(cdUsr),
+    );
+    if (!limite.permitido) {
+      return { ok: false, erro: limite.erro ?? "Limite de rascunhos atingido." };
+    }
   }
 
   /* O responsável é sempre o usuário logado — nunca vem do cliente */

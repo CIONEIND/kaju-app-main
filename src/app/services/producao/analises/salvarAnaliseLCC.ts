@@ -4,6 +4,7 @@ import { getUsuarioAtual } from "@/lib/auth/auth";
 import { requirePermission } from "@/lib/rbac/access";
 import { PERMISSIONS } from "@/lib/rbac/permissions";
 import CioneLCCService from "@/lib/top-manager/service/cione-lcc/cione-lcc.service";
+import { verificarLimiteRascunhos } from "./limiteRascunhos";
 
 const service = new CioneLCCService();
 
@@ -31,6 +32,16 @@ export async function salvarAnaliseLCC(
     const usuario = await getUsuarioAtual();
     if (!usuario) return { ok: false, erro: "Sessão expirada." };
     await requirePermission(PERMISSIONS.ANALISES_MANAGE);
+
+    /* Limite de rascunhos — só na criação */
+    if (input.id === undefined && (input.status ?? "concluida") === "rascunho") {
+      const limite = await verificarLimiteRascunhos((cdUsr) =>
+        service.contarRascunhos(cdUsr),
+      );
+      if (!limite.permitido) {
+        return { ok: false, erro: limite.erro ?? "Limite de rascunhos atingido." };
+      }
+    }
 
     const dto = {
       status: input.status ?? "concluida",

@@ -108,4 +108,12 @@ export default class CioneF3PGI6Service {
     if (!afetadas) throw new Error("Análise não encontrada.");
     return afetadas;
   }
+      // cione-f3pgi6.service.ts
+  async excluir(id: number, tsx: Knex = this.db): Promise<number> {
+    return CioneF3PGI6Repository.excluir(id, tsx);
+  }
+  async contarRascunhos(cdUsr: number, tsx: Knex = this.db): Promise<number> {
+  return CioneF3PGI6Repository.contarRascunhos(cdUsr, tsx);
+}
+
 }

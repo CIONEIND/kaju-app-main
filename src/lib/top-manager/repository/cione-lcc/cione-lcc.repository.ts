@@ -89,7 +89,9 @@ export default class CioneLCCRepository {
     if (filtro.origemId !== undefined) q.where("C.Origem", filtro.origemId);
     aplicarStatus(q, filtro);
   }
-
+  static async excluir(id: number, tsx: Knex = this.db): Promise<number> {
+    return tsx.withSchema(SCHEMA).table(TABELA).where("ID", id).del();
+  }
   static async listar(
     filtro: FiltroCentral = {},
     tsx: Knex = this.db,
@@ -156,7 +158,8 @@ export default class CioneLCCRepository {
       .withSchema(SCHEMA)
       .table("CIONE_LotesSemanais")
       .select("Id as id", "NomeLote as nome")
-      .andWhereILike("NomeLote", "%-CI%")
+      .whereILike("NomeLote", "%CI-BR%")
+      .orWhereILike("NomeLote", "%CH-BR%")
       .andWhere("Ativo", 1)
       .orderBy("NomeLote", "asc");
     return rows.map((r: { id: number; nome: string | null }) => ({
@@ -178,4 +181,18 @@ export default class CioneLCCRepository {
       nome: r.nome ?? `Origem ${r.cdObj}`,
     }));
   }
+
+    static async contarRascunhos(
+      cdUsr: number,
+      tsx: Knex = this.db,
+    ): Promise<number> {
+      const rows = await tsx
+        .withSchema(SCHEMA)
+        .from(TABELA)
+        .where("Status", 0)
+        .where("Responsavel", cdUsr)
+        .count({ total: "*" });
+  
+      return Number(rows[0]?.total ?? 0);
+    }
 }

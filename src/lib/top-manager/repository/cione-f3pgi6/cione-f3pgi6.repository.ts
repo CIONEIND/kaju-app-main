@@ -164,7 +164,8 @@ export default class CioneF3PGI6Repository {
       .withSchema(SCHEMA)
       .table("CIONE_LotesSemanais")
       .select("Id as id", "NomeLote as nome")
-      .andWhereILike("NomeLote", "%-CI%")
+      .whereILike("NomeLote", "%CI-BR%")
+      .orWhereILike("NomeLote", "%CH-BR%")
       .andWhere("Ativo", 1)
       .orderBy("NomeLote", "asc");
 
@@ -179,7 +180,7 @@ export default class CioneF3PGI6Repository {
         .withSchema(SCHEMA)
         .table("TbObj")
         .select("CdObj as cdObj", "NmObj as nome")
-        .whereIn("CdObj", [52913, 52914, 52916, 52917, 53089, 53093, 53097, 52917])
+        .whereIn("CdObj", [52913, 52914, 52916, 52917])
         .orderBy("NmObj", "asc");
 
     return rows.map((r: { cdObj: number; nome: string | null }) => ({
@@ -187,4 +188,18 @@ export default class CioneF3PGI6Repository {
         nome: r.nome ?? `Tipo ${r.cdObj}`,
     }));
     }
+
+  static async contarRascunhos(
+    cdUsr: number,
+    tsx: Knex = this.db,
+  ): Promise<number> {
+    const rows = await tsx
+      .withSchema(SCHEMA)
+      .from(TABELA)
+      .where("Status", 0)
+      .where("Responsavel", cdUsr)
+      .count({ total: "*" });
+
+    return Number(rows[0]?.total ?? 0);
+  }
 }

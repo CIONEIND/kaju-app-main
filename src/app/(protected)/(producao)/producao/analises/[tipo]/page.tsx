@@ -12,6 +12,7 @@ import { getUsuarioAtual } from "@/lib/auth/auth";
 import { getCurrentUserAccess } from "@/lib/rbac/access";
 import { PERMISSIONS } from "@/lib/rbac/permissions";
 import { NovaAnaliseModal } from "../NovaAnaliseModal";
+import { hojeBR } from "@/lib/analises/data";
 
 const POR_PAGINA = 12;
 
@@ -31,11 +32,6 @@ function situacao(v: string | string[] | undefined): StatusAnalise {
     return texto(v) === "rascunho" ? "rascunho" : "concluida";
 }
 
-function hojeISO(): string {
-    const d = new Date();
-    const p = (n: number) => String(n).padStart(2, "0");
-    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
-}
 
 function dataISO(v: string | string[] | undefined): string | undefined {
     const s = texto(v);
@@ -61,7 +57,7 @@ export default async function CentralTipoPage({
     const q = await searchParams;
     const status = situacao(q.status);
 
-    const hoje = hojeISO();
+    const hoje = hojeBR();
     const dtInicial = status === "rascunho" ? undefined : (dataISO(q.dt) ?? hoje);
     const dtFinal = status === "rascunho" ? undefined : (dataISO(q.ate) ?? hoje);
 

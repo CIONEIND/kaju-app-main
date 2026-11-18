@@ -25,7 +25,7 @@ services:
     restart: "no"
     env_file:
       - /srv/kaju/prod/.env
-         # - . /.env  
+        # - . /.env
     command: ["npx", "prisma", "migrate", "deploy"]
     depends_on:
       postgres:
@@ -45,6 +45,7 @@ services:
     environment:
       # Aparece em GET /api/health — qual versão está no ar
       APP_COMMIT: ${APP_COMMIT:-local}
+      TZ: America/Fortaleza # ← adicione esta linha
     ports:
       - "127.0.0.1:3002:3002"
     depends_on:

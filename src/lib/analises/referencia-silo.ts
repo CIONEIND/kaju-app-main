@@ -55,16 +55,37 @@ export function montarTabelaReferencia(
 
   /* Níveis de 0,00 até a altura útil, de 10 em 10 cm */
   const total = Math.floor(geometria.alturaUtil * 10);
+  const niveis: number[] = [];
+
   for (let i = 0; i <= total; i++) {
     const vazio = r(i / 10, 2);
-    if (vazio > geometria.alturaUtil) break;
+    if (vazio >= geometria.alturaUtil) break;
+    niveis.push(vazio);
+  }
 
-    const leitura = calcularLeitura({
-      geometria,
-      valorMedido: vazio,
-      modo: "vazio",
-      pesoEspecifico: pesos[0]?.valorKgM3 ?? 0,
-    });
+  /* A última linha é sempre a altura útil exata — silo completamente vazio */
+  niveis.push(r(geometria.alturaUtil, 2));
+
+  for (const vazio of niveis) {
+    let leitura;
+    try {
+      leitura = calcularLeitura({
+        geometria,
+        valorMedido: vazio,
+        modo: "vazio",
+        pesoEspecifico: pesos[0]?.valorKgM3 ?? 0,
+      });
+    } catch {
+      /* Nível fora da faixa — registra a linha zerada em vez de quebrar a tabela */
+      linhas.push({
+        vazio,
+        volumeCilindro: 0,
+        volumeTronco: 0,
+        volumeTotal: 0,
+        pesos: pesos.map(() => 0),
+      });
+      continue;
+    }
 
     linhas.push({
       vazio,

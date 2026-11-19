@@ -94,9 +94,10 @@ export function calcularVolumeTronco(
   }
 
   /* Altura de produto que ainda resta dentro do cone */
+
   const alturaProdutoNoTronco = Math.max(
     0,
-    Math.min(g.alturaTronco, g.alturaUtil - vazio - aCilindro),
+    Math.min(g.alturaTronco, g.alturaUtil - vazio),
   );
 
   if (alturaProdutoNoTronco <= 0) return 0;
